@@ -1,4 +1,6 @@
 import { events, items, type Event, type InsertEvent, type Item, type InsertItem } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export interface IStorage {
@@ -20,68 +22,57 @@ export interface IStorage {
   }>;
 }
 
-export class MemStorage implements IStorage {
-  private events: Map<string, Event>;
-  private items: Map<number, Item>;
-  private currentItemId: number;
-
-  constructor() {
-    this.events = new Map();
-    this.items = new Map();
-    this.currentItemId = 1;
-  }
-
+export class DatabaseStorage implements IStorage {
   async createEvent(insertEvent: InsertEvent): Promise<Event> {
     const id = nanoid();
-    const event: Event = {
-      ...insertEvent,
-      id,
-      date: insertEvent.date || null,
-      description: insertEvent.description || null,
-      location: insertEvent.location || null,
-      expectedGuests: insertEvent.expectedGuests || null,
-      createdAt: new Date(),
-    };
-    this.events.set(id, event);
+    const [event] = await db
+      .insert(events)
+      .values({
+        ...insertEvent,
+        id,
+        date: insertEvent.date || null,
+        description: insertEvent.description || null,
+        location: insertEvent.location || null,
+        expectedGuests: insertEvent.expectedGuests || null,
+      })
+      .returning();
     return event;
   }
 
   async getEvent(id: string): Promise<Event | undefined> {
-    return this.events.get(id);
+    const [event] = await db.select().from(events).where(eq(events.id, id));
+    return event || undefined;
   }
 
   async getEventItems(eventId: string): Promise<Item[]> {
-    return Array.from(this.items.values()).filter(item => item.eventId === eventId);
+    return await db.select().from(items).where(eq(items.eventId, eventId));
   }
 
   async addItem(insertItem: InsertItem): Promise<Item> {
-    const id = this.currentItemId++;
-    const item: Item = {
-      ...insertItem,
-      id,
-      isCustom: insertItem.isCustom ?? false,
-      claimedBy: insertItem.claimedBy || null,
-      claimedByEmail: insertItem.claimedByEmail || null,
-      claimedAt: null,
-    };
-    this.items.set(id, item);
+    const [item] = await db
+      .insert(items)
+      .values({
+        ...insertItem,
+        isCustom: insertItem.isCustom ?? false,
+        claimedBy: insertItem.claimedBy || null,
+        claimedByEmail: insertItem.claimedByEmail || null,
+      })
+      .returning();
     return item;
   }
 
   async claimItem(itemId: number, claimedBy: string, claimedByEmail?: string): Promise<Item | undefined> {
-    const item = this.items.get(itemId);
-    if (!item || item.claimedBy) {
-      return undefined;
-    }
-
-    const updatedItem: Item = {
-      ...item,
-      claimedBy,
-      claimedByEmail: claimedByEmail || null,
-      claimedAt: new Date(),
-    };
-    this.items.set(itemId, updatedItem);
-    return updatedItem;
+    const [item] = await db
+      .update(items)
+      .set({
+        claimedBy,
+        claimedByEmail: claimedByEmail || null,
+        claimedAt: new Date(),
+      })
+      .where(eq(items.id, itemId))
+      .returning();
+    
+    return item || undefined;
   }
 
   async getEventStats(eventId: string): Promise<{
@@ -100,4 +91,4 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

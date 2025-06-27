@@ -36,7 +36,7 @@ This is a full-stack potluck event management application built with React, Type
 - **API Server**: Express.js with TypeScript
 - **Real-time Communication**: WebSocket server for live updates
 - **Data Layer**: Drizzle ORM with PostgreSQL
-- **Storage**: Configurable storage interface (in-memory for development)
+- **Storage**: PostgreSQL database with Drizzle ORM
 - **Request Handling**: RESTful API with JSON responses
 
 ### Database Schema
@@ -89,7 +89,7 @@ This is a full-stack potluck event management application built with React, Type
 ### Development Environment
 - Frontend served by Vite dev server with HMR
 - Backend runs with tsx for TypeScript execution
-- In-memory storage for rapid development iteration
+- PostgreSQL database for persistent data storage
 - WebSocket server integrated with HTTP server
 
 ### Production Build Process
@@ -109,6 +109,7 @@ This is a full-stack potluck event management application built with React, Type
 Changelog:
 - June 27, 2025. Initial setup
 - June 27, 2025. Added localStorage integration to remember user names/emails for repeated item claims
+- June 27, 2025. Migrated from in-memory storage to PostgreSQL database with Drizzle ORM
 ```
 
 ## User Preferences
