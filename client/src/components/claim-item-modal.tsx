@@ -25,12 +25,33 @@ export default function ClaimItemModal() {
     },
   });
 
+  // Load saved user data from localStorage
+  useEffect(() => {
+    const savedName = localStorage.getItem('potluck-user-name');
+    const savedEmail = localStorage.getItem('potluck-user-email');
+    
+    if (savedName || savedEmail) {
+      form.reset({
+        name: savedName || "",
+        email: savedEmail || "",
+      });
+    }
+  }, [form]);
+
   // Listen for modal open events
   useEffect(() => {
     const handleOpenModal = (event: CustomEvent<Item>) => {
       setSelectedItem(event.detail);
       setIsOpen(true);
-      form.reset();
+      
+      // Load saved data when opening modal
+      const savedName = localStorage.getItem('potluck-user-name');
+      const savedEmail = localStorage.getItem('potluck-user-email');
+      
+      form.reset({
+        name: savedName || "",
+        email: savedEmail || "",
+      });
     };
 
     window.addEventListener('openClaimModal' as any, handleOpenModal);
@@ -64,6 +85,12 @@ export default function ClaimItemModal() {
   });
 
   const onSubmit = (data: ClaimItem) => {
+    // Save user data to localStorage for future use
+    localStorage.setItem('potluck-user-name', data.name);
+    if (data.email) {
+      localStorage.setItem('potluck-user-email', data.email);
+    }
+    
     claimItemMutation.mutate(data);
   };
 

@@ -36,6 +36,10 @@ export class MemStorage implements IStorage {
     const event: Event = {
       ...insertEvent,
       id,
+      date: insertEvent.date || null,
+      description: insertEvent.description || null,
+      location: insertEvent.location || null,
+      expectedGuests: insertEvent.expectedGuests || null,
       createdAt: new Date(),
     };
     this.events.set(id, event);
@@ -55,6 +59,9 @@ export class MemStorage implements IStorage {
     const item: Item = {
       ...insertItem,
       id,
+      isCustom: insertItem.isCustom ?? false,
+      claimedBy: insertItem.claimedBy || null,
+      claimedByEmail: insertItem.claimedByEmail || null,
       claimedAt: null,
     };
     this.items.set(id, item);

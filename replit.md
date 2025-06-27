@@ -108,6 +108,7 @@ This is a full-stack potluck event management application built with React, Type
 ```
 Changelog:
 - June 27, 2025. Initial setup
+- June 27, 2025. Added localStorage integration to remember user names/emails for repeated item claims
 ```
 
 ## User Preferences
