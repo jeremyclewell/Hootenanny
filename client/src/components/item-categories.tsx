@@ -44,8 +44,22 @@ export default function ItemCategories({ items }: ItemCategoriesProps) {
   const handleClaimItem = (item: Item) => {
     if (item.claimedBy) return;
     
-    // Dispatch custom event to open modal
-    window.dispatchEvent(new CustomEvent('openClaimModal', { detail: item }));
+    // Check if user name is already saved
+    const savedName = localStorage.getItem('potluck-user-name');
+    
+    if (savedName) {
+      // Auto-claim with saved info
+      window.dispatchEvent(new CustomEvent('autoClaimItem', { 
+        detail: { 
+          item, 
+          name: savedName, 
+          email: localStorage.getItem('potluck-user-email') || '' 
+        } 
+      }));
+    } else {
+      // Show modal for first-time users
+      window.dispatchEvent(new CustomEvent('openClaimModal', { detail: item }));
+    }
   };
 
   const renderCategorySection = (category: string, categoryItems: Item[]) => {
@@ -122,7 +136,7 @@ export default function ItemCategories({ items }: ItemCategoriesProps) {
                   </Badge>
                 ) : (
                   <Button className="bg-primary hover:bg-primary/90">
-                    Claim Item
+                    {localStorage.getItem('potluck-user-name') ? 'Claim Item' : 'Claim Item'}
                   </Button>
                 )}
               </div>

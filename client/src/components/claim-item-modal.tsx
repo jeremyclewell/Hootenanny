@@ -38,28 +38,6 @@ export default function ClaimItemModal() {
     }
   }, [form]);
 
-  // Listen for modal open events
-  useEffect(() => {
-    const handleOpenModal = (event: CustomEvent<Item>) => {
-      setSelectedItem(event.detail);
-      setIsOpen(true);
-      
-      // Load saved data when opening modal
-      const savedName = localStorage.getItem('potluck-user-name');
-      const savedEmail = localStorage.getItem('potluck-user-email');
-      
-      form.reset({
-        name: savedName || "",
-        email: savedEmail || "",
-      });
-    };
-
-    window.addEventListener('openClaimModal' as any, handleOpenModal);
-    return () => {
-      window.removeEventListener('openClaimModal' as any, handleOpenModal);
-    };
-  }, [form]);
-
   const claimItemMutation = useMutation({
     mutationFn: async (data: ClaimItem) => {
       if (!selectedItem) throw new Error("No item selected");
@@ -83,6 +61,39 @@ export default function ClaimItemModal() {
       });
     },
   });
+
+  // Listen for modal open events and auto-claim events
+  useEffect(() => {
+    const handleOpenModal = (event: CustomEvent<Item>) => {
+      setSelectedItem(event.detail);
+      setIsOpen(true);
+      
+      // Load saved data when opening modal
+      const savedName = localStorage.getItem('potluck-user-name');
+      const savedEmail = localStorage.getItem('potluck-user-email');
+      
+      form.reset({
+        name: savedName || "",
+        email: savedEmail || "",
+      });
+    };
+
+    const handleAutoClaimItem = (event: CustomEvent<{ item: Item; name: string; email: string }>) => {
+      const { item, name, email } = event.detail;
+      setSelectedItem(item);
+      
+      // Directly submit the claim without showing modal
+      claimItemMutation.mutate({ name, email });
+    };
+
+    window.addEventListener('openClaimModal' as any, handleOpenModal);
+    window.addEventListener('autoClaimItem' as any, handleAutoClaimItem);
+    
+    return () => {
+      window.removeEventListener('openClaimModal' as any, handleOpenModal);
+      window.removeEventListener('autoClaimItem' as any, handleAutoClaimItem);
+    };
+  }, [form, claimItemMutation]);
 
   const onSubmit = (data: ClaimItem) => {
     // Save user data to localStorage for future use
