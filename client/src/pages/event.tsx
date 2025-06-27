@@ -1,0 +1,97 @@
+import { useParams } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { useWebSocket } from "@/lib/websocket";
+import { queryClient } from "@/lib/queryClient";
+import { useEffect } from "react";
+import EventHeader from "@/components/event-header";
+import QuickStats from "@/components/quick-stats";
+import AddCustomItem from "@/components/add-custom-item";
+import ItemCategories from "@/components/item-categories";
+import ClaimItemModal from "@/components/claim-item-modal";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { AlertCircle } from "lucide-react";
+
+export default function Event() {
+  const { id } = useParams();
+  const { lastMessage } = useWebSocket(id || null);
+
+  // Queries
+  const eventQuery = useQuery({
+    queryKey: [`/api/events/${id}`],
+    enabled: !!id,
+  });
+
+  const itemsQuery = useQuery({
+    queryKey: [`/api/events/${id}/items`],
+    enabled: !!id,
+  });
+
+  const statsQuery = useQuery({
+    queryKey: [`/api/events/${id}/stats`],
+    enabled: !!id,
+  });
+
+  // Handle WebSocket updates
+  useEffect(() => {
+    if (!lastMessage || !id) return;
+
+    if (lastMessage.type === 'itemClaimed' || lastMessage.type === 'itemAdded') {
+      // Invalidate queries to refetch data
+      queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/items`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/stats`] });
+    }
+  }, [lastMessage, id]);
+
+  if (eventQuery.isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white shadow-sm border-b border-gray-200 h-16" />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <Skeleton className="h-32 w-full mb-8" />
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-20" />
+            ))}
+          </div>
+          <Skeleton className="h-48 w-full" />
+        </main>
+      </div>
+    );
+  }
+
+  if (eventQuery.error || !eventQuery.data) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
+        <Card className="w-full max-w-md mx-4">
+          <CardContent className="pt-6">
+            <div className="flex mb-4 gap-2">
+              <AlertCircle className="h-8 w-8 text-red-500" />
+              <h1 className="text-2xl font-bold text-gray-900">Event Not Found</h1>
+            </div>
+            <p className="mt-4 text-sm text-gray-600">
+              The potluck event you're looking for doesn't exist or has been removed.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const event = eventQuery.data;
+  const items = itemsQuery.data || [];
+  const stats = statsQuery.data || { total: 0, claimed: 0, available: 0, custom: 0 };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <EventHeader event={event} />
+      
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <QuickStats stats={stats} />
+        <AddCustomItem eventId={event.id} />
+        <ItemCategories items={items} />
+        <ClaimItemModal />
+      </main>
+    </div>
+  );
+}
