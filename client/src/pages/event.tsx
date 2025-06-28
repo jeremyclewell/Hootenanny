@@ -83,6 +83,10 @@ export default function Event() {
   const items = itemsQuery.data || [];
   const stats = statsQuery.data || { total: 0, claimed: 0, available: 0, custom: 0 };
 
+  if (!event) {
+    return null; // This shouldn't happen due to the earlier checks, but needed for TypeScript
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <EventHeader event={event} />
