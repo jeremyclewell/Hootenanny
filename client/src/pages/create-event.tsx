@@ -78,9 +78,9 @@ export default function CreateEvent() {
       <main className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl">Create New Shindig Event</CardTitle>
+            <CardTitle className="text-2xl">Create New Hootenanny Event</CardTitle>
             <CardDescription>
-              Set up your shindig event with themed items and share with guests
+              Set up your hootenanny event with themed items and share with guests
             </CardDescription>
           </CardHeader>
           <CardContent>

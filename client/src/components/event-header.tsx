@@ -65,7 +65,7 @@ export default function EventHeader({ event }: EventHeaderProps) {
                 <Utensils className="text-white text-lg" />
               </div>
               <div>
-                <h1 className="text-xl font-semibold text-gray-900">Shindig</h1>
+                <h1 className="text-xl font-semibold text-gray-900">Hootenanny</h1>
                 <p className="text-sm text-gray-500">{event.title}</p>
               </div>
             </div>

@@ -15,7 +15,7 @@ export default function Home() {
                 <Utensils className="text-white text-lg" />
               </div>
               <div>
-                <h1 className="text-xl font-semibold text-gray-900">Shindig</h1>
+                <h1 className="text-xl font-semibold text-gray-900">Hootenanny</h1>
                 <p className="text-sm text-gray-500">Organize amazing potluck events</p>
               </div>
             </div>
@@ -27,7 +27,7 @@ export default function Home() {
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            Plan the Perfect Shindig
+            Plan the Perfect Hootenanny
           </h2>
           <p className="text-xl text-gray-600 mb-8">
             Create themed potluck events, share sign-up sheets, and coordinate with friends and family
