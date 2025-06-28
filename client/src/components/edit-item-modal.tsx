@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -112,16 +112,16 @@ export default function EditItemModal() {
   };
 
   const categories = [
-    "Appetizers",
-    "Main Dishes", 
-    "Side Dishes",
-    "Desserts",
-    "Beverages",
-    "Snacks",
-    "Salads",
-    "Bread/Rolls",
-    "Condiments",
-    "Other"
+    { value: "appetizers", label: "Appetizers" },
+    { value: "main-dishes", label: "Main Dishes" }, 
+    { value: "sides", label: "Side Dishes" },
+    { value: "desserts", label: "Desserts" },
+    { value: "beverages", label: "Beverages" },
+    { value: "snacks", label: "Snacks" },
+    { value: "salads", label: "Salads" },
+    { value: "bread", label: "Bread/Rolls" },
+    { value: "condiments", label: "Condiments" },
+    { value: "other", label: "Other" }
   ];
 
   return (
@@ -129,6 +129,9 @@ export default function EditItemModal() {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Edit Item</DialogTitle>
+          <DialogDescription>
+            Update the item name and category. Only unclaimed items can be edited.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
@@ -146,7 +149,7 @@ export default function EditItemModal() {
           <div className="space-y-2">
             <Label htmlFor="category">Category</Label>
             <Select
-              value={form.watch("category")}
+              value={form.watch("category") || ""}
               onValueChange={(value) => form.setValue("category", value)}
             >
               <SelectTrigger>
@@ -154,8 +157,8 @@ export default function EditItemModal() {
               </SelectTrigger>
               <SelectContent>
                 {categories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
+                  <SelectItem key={category.value} value={category.value}>
+                    {category.label}
                   </SelectItem>
                 ))}
               </SelectContent>
