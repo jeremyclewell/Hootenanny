@@ -1,4 +1,4 @@
-import { events, items, type Event, type InsertEvent, type Item, type InsertItem } from "@shared/schema";
+import { events, items, type Event, type InsertEvent, type Item, type InsertItem, type EditItem } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -12,6 +12,7 @@ export interface IStorage {
   getEventItems(eventId: string): Promise<Item[]>;
   addItem(item: InsertItem): Promise<Item>;
   claimItem(itemId: number, claimedBy: string, claimedByEmail?: string): Promise<Item | undefined>;
+  updateItem(itemId: number, updates: EditItem): Promise<Item | undefined>;
   deleteItem(itemId: number): Promise<boolean>;
   
   // Stats
@@ -69,6 +70,19 @@ export class DatabaseStorage implements IStorage {
         claimedBy,
         claimedByEmail: claimedByEmail || null,
         claimedAt: new Date(),
+      })
+      .where(eq(items.id, itemId))
+      .returning();
+    
+    return item || undefined;
+  }
+
+  async updateItem(itemId: number, updates: EditItem): Promise<Item | undefined> {
+    const [item] = await db
+      .update(items)
+      .set({
+        name: updates.name,
+        category: updates.category,
       })
       .where(eq(items.id, itemId))
       .returning();

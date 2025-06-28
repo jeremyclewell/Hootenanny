@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { insertEventSchema, insertItemSchema, claimItemSchema } from "@shared/schema";
+import { insertEventSchema, insertItemSchema, claimItemSchema, editItemSchema } from "@shared/schema";
 import { getThemeItems } from "../client/src/lib/theme-items";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -142,6 +142,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(item);
     } catch (error) {
       res.status(400).json({ message: "Invalid claim data" });
+    }
+  });
+
+  // Update item (only unclaimed items)
+  app.put("/api/items/:id", async (req, res) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      const updateData = editItemSchema.parse(req.body);
+      
+      // First get the item to check if it's unclaimed
+      const items = await storage.getEventItems(req.body.eventId);
+      const item = items.find(i => i.id === itemId);
+      
+      if (!item) {
+        return res.status(404).json({ message: "Item not found" });
+      }
+      
+      if (item.claimedBy) {
+        return res.status(400).json({ message: "Cannot edit claimed items" });
+      }
+      
+      const updatedItem = await storage.updateItem(itemId, updateData);
+      
+      if (!updatedItem) {
+        return res.status(500).json({ message: "Failed to update item" });
+      }
+      
+      // Broadcast update
+      broadcastToEvent(item.eventId, {
+        type: 'itemUpdated',
+        item: updatedItem,
+      });
+      
+      res.json(updatedItem);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid update data" });
     }
   });
 

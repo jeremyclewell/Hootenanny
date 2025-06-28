@@ -39,8 +39,14 @@ export const claimItemSchema = z.object({
   email: z.string().email().optional().or(z.literal("")),
 });
 
+export const editItemSchema = z.object({
+  name: z.string().min(1, "Item name is required"),
+  category: z.string().min(1, "Category is required"),
+});
+
 export type Event = typeof events.$inferSelect;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
 export type Item = typeof items.$inferSelect;
 export type InsertItem = z.infer<typeof insertItemSchema>;
 export type ClaimItem = z.infer<typeof claimItemSchema>;
+export type EditItem = z.infer<typeof editItemSchema>;
