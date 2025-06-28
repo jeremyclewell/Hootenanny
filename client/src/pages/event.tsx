@@ -36,7 +36,7 @@ export default function Event() {
   useEffect(() => {
     if (!lastMessage || !id) return;
 
-    if (lastMessage.type === 'itemClaimed' || lastMessage.type === 'itemAdded') {
+    if (lastMessage.type === 'itemClaimed' || lastMessage.type === 'itemAdded' || lastMessage.type === 'itemDeleted') {
       // Invalidate queries to refetch data
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/items`] });
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/stats`] });
@@ -89,7 +89,7 @@ export default function Event() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <QuickStats stats={stats} />
         <AddCustomItem eventId={event.id} />
-        <ItemCategories items={items} />
+        <ItemCategories items={items} eventId={event.id} />
         <ClaimItemModal />
       </main>
     </div>

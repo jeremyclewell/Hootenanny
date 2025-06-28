@@ -38,6 +38,37 @@ const categoryColors = {
 export default function ItemCategories({ items, eventId }: ItemCategoriesProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Delete item mutation
+  const deleteItemMutation = useMutation({
+    mutationFn: async (itemId: number) => {
+      const response = await fetch(`/api/items/${itemId}`, {
+        method: "DELETE",
+        body: JSON.stringify({ eventId }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      if (!response.ok) throw new Error("Failed to delete item");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/events", eventId, "items"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/events", eventId, "stats"] });
+      toast({
+        title: "Success",
+        description: "Item removed successfully!",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to remove item. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Group items by category
   const itemsByCategory = items.reduce((acc, item) => {
     if (!acc[item.category]) {
@@ -66,6 +97,11 @@ export default function ItemCategories({ items, eventId }: ItemCategoriesProps) 
       // Show modal for first-time users
       window.dispatchEvent(new CustomEvent('openClaimModal', { detail: item }));
     }
+  };
+
+  const handleDeleteItem = (e: React.MouseEvent, itemId: number) => {
+    e.stopPropagation(); // Prevent triggering claim action
+    deleteItemMutation.mutate(itemId);
   };
 
   const renderCategorySection = (category: string, categoryItems: Item[]) => {
@@ -141,9 +177,20 @@ export default function ItemCategories({ items, eventId }: ItemCategoriesProps) 
                     Claimed
                   </Badge>
                 ) : (
-                  <Button className="bg-primary hover:bg-primary/90">
-                    {localStorage.getItem('potluck-user-name') ? 'Claim Item' : 'Claim Item'}
-                  </Button>
+                  <div className="flex items-center space-x-2">
+                    <Button className="bg-primary hover:bg-primary/90">
+                      {localStorage.getItem('potluck-user-name') ? 'Claim Item' : 'Claim Item'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => handleDeleteItem(e, item.id)}
+                      disabled={deleteItemMutation.isPending}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 )}
               </div>
             ))}
