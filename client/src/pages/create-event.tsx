@@ -16,7 +16,7 @@ import { insertEventSchema, type InsertEvent } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { themes } from "@/lib/theme-items";
-import { ArrowLeft, Calendar as CalendarIcon, MapPin, Users, Clock } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, MapPin, Users, Clock, PartyPopper } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
 
@@ -189,6 +189,18 @@ export default function CreateEvent() {
                     )}
                   />
 
+                  <div className="flex flex-col">
+                    <label className="flex items-center gap-2 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mb-2">
+                      <Clock className="h-4 w-4" />
+                      Event Time (Optional)
+                    </label>
+                    <Input 
+                      type="time" 
+                      placeholder="Select time"
+                      className="w-full"
+                    />
+                  </div>
+
                   <FormField
                     control={form.control}
                     name="expectedGuests"
@@ -235,7 +247,8 @@ export default function CreateEvent() {
                   className="w-full bg-primary hover:bg-primary/90"
                   disabled={createEventMutation.isPending}
                 >
-                  {createEventMutation.isPending ? "Creating Event..." : "Create Event"}
+                  <PartyPopper className="mr-2 h-4 w-4" />
+                  {createEventMutation.isPending ? "Creating..." : "Create Hootenanny"}
                 </Button>
               </form>
             </Form>
