@@ -44,21 +44,53 @@ export default function ClaimItemModal() {
       const response = await apiRequest("POST", `/api/items/${selectedItem.id}/claim`, data);
       return response.json();
     },
+    onMutate: async (data: ClaimItem) => {
+      if (!selectedItem) return;
+      
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: [`/api/events/${selectedItem.eventId}/items`] });
+      await queryClient.cancelQueries({ queryKey: [`/api/events/${selectedItem.eventId}/stats`] });
+
+      // Snapshot the previous value
+      const previousItems = queryClient.getQueryData([`/api/events/${selectedItem.eventId}/items`]);
+      const previousStats = queryClient.getQueryData([`/api/events/${selectedItem.eventId}/stats`]);
+
+      // Optimistically update the item as claimed
+      queryClient.setQueryData([`/api/events/${selectedItem.eventId}/items`], (old: any) => 
+        old ? old.map((item: any) => 
+          item.id === selectedItem.id 
+            ? { ...item, claimedBy: data.name, claimedByEmail: data.email, claimedAt: new Date() }
+            : item
+        ) : []
+      );
+
+      return { previousItems, previousStats };
+    },
+    onError: (error: any, data, context) => {
+      if (context && selectedItem) {
+        // Roll back on error
+        queryClient.setQueryData([`/api/events/${selectedItem.eventId}/items`], context.previousItems);
+        queryClient.setQueryData([`/api/events/${selectedItem.eventId}/stats`], context.previousStats);
+      }
+      toast({
+        title: "Error",
+        description: error.message || "Failed to claim item. It may have already been claimed.",
+        variant: "destructive",
+      });
+    },
     onSuccess: (item) => {
       setIsOpen(false);
       toast({
         title: "Item Claimed Successfully!",
         description: `You've claimed "${item.name}"`,
       });
-      queryClient.invalidateQueries({ queryKey: [`/api/events/${item.eventId}/items`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/events/${item.eventId}/stats`] });
     },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to claim item. It may have already been claimed.",
-        variant: "destructive",
-      });
+    onSettled: (item) => {
+      if (item) {
+        // Always refetch to ensure correct data
+        queryClient.invalidateQueries({ queryKey: [`/api/events/${item.eventId}/items`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/events/${item.eventId}/stats`] });
+      }
     },
   });
 

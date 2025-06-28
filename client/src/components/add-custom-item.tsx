@@ -39,21 +39,54 @@ export default function AddCustomItem({ eventId }: AddCustomItemProps) {
       const response = await apiRequest("POST", `/api/events/${eventId}/items`, data);
       return response.json();
     },
+    onMutate: async (data: CustomItemForm) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: [`/api/events/${eventId}/items`] });
+      await queryClient.cancelQueries({ queryKey: [`/api/events/${eventId}/stats`] });
+
+      // Snapshot the previous value
+      const previousItems = queryClient.getQueryData([`/api/events/${eventId}/items`]);
+      const previousStats = queryClient.getQueryData([`/api/events/${eventId}/stats`]);
+
+      // Optimistically add the new item
+      const optimisticItem = {
+        id: Date.now(), // Temporary ID
+        name: data.name,
+        category: data.category,
+        eventId: eventId,
+        isCustom: true,
+        claimedBy: null,
+        claimedByEmail: null,
+        claimedAt: null,
+      };
+
+      queryClient.setQueryData([`/api/events/${eventId}/items`], (old: any) => 
+        old ? [...old, optimisticItem] : [optimisticItem]
+      );
+
+      return { previousItems, previousStats };
+    },
+    onError: (err, data, context) => {
+      // Roll back on error
+      queryClient.setQueryData([`/api/events/${eventId}/items`], context?.previousItems);
+      queryClient.setQueryData([`/api/events/${eventId}/stats`], context?.previousStats);
+      toast({
+        title: "Error",
+        description: "Failed to add item. Please try again.",
+        variant: "destructive",
+      });
+    },
     onSuccess: () => {
       form.reset();
       toast({
         title: "Item Added!",
         description: "Your custom item has been added to the list.",
       });
+    },
+    onSettled: () => {
+      // Always refetch to ensure correct data
       queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/items`] });
       queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/stats`] });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to add item. Please try again.",
-        variant: "destructive",
-      });
     },
   });
 
