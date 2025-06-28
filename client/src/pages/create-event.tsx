@@ -16,7 +16,7 @@ import { insertEventSchema, type InsertEvent } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { themes } from "@/lib/theme-items";
-import { ArrowLeft, Calendar as CalendarIcon, MapPin, Users } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, MapPin, Users, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
 
@@ -146,13 +146,16 @@ export default function CreateEvent() {
                   )}
                 />
 
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid md:grid-cols-3 gap-4">
                   <FormField
                     control={form.control}
                     name="date"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <FormLabel>Event Date (Optional)</FormLabel>
+                        <FormLabel className="flex items-center gap-2">
+                          <CalendarIcon className="h-4 w-4" />
+                          Event Date (Optional)
+                        </FormLabel>
                         <Popover>
                           <PopoverTrigger asChild>
                             <FormControl>
@@ -191,13 +194,17 @@ export default function CreateEvent() {
                     name="expectedGuests"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Expected Guests (Optional)</FormLabel>
+                        <FormLabel className="flex items-center gap-2">
+                          <Users className="h-4 w-4" />
+                          Expected Guests (Optional)
+                        </FormLabel>
                         <FormControl>
                           <Input
                             type="number"
                             placeholder="25"
                             {...field}
-                            onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                            value={field.value || ""}
+                            onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
                           />
                         </FormControl>
                         <FormMessage />
@@ -211,9 +218,12 @@ export default function CreateEvent() {
                   name="location"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Location (Optional)</FormLabel>
+                      <FormLabel className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        Location (Optional)
+                      </FormLabel>
                       <FormControl>
-                        <Input placeholder="123 Summer Lane, Poolside" {...field} />
+                        <Input placeholder="123 Summer Lane, Poolside" {...field} value={field.value || ""} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
