@@ -157,11 +157,6 @@ export default function ItemCategories({ items, eventId }: ItemCategoriesProps) 
                   <div>
                     <h4 className="font-medium text-gray-900">
                       {item.name}
-                      {item.isCustom && (
-                        <Badge variant="outline" className="ml-2 text-xs">
-                          Custom
-                        </Badge>
-                      )}
                     </h4>
                     <p className="text-sm text-gray-600">
                       {item.claimedBy ? (
