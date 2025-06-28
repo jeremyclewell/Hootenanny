@@ -145,5 +145,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete item (only unclaimed items)
+  app.delete("/api/items/:id", async (req, res) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      const { eventId } = req.body;
+      
+      if (!eventId) {
+        return res.status(400).json({ message: "Event ID is required" });
+      }
+      
+      // First get the item to check if it's unclaimed
+      const items = await storage.getEventItems(eventId);
+      const item = items.find(i => i.id === itemId);
+      
+      if (!item) {
+        return res.status(404).json({ message: "Item not found" });
+      }
+      
+      if (item.claimedBy) {
+        return res.status(400).json({ message: "Cannot delete claimed items" });
+      }
+      
+      const success = await storage.deleteItem(itemId);
+      
+      if (!success) {
+        return res.status(500).json({ message: "Failed to delete item" });
+      }
+      
+      // Broadcast update
+      broadcastToEvent(eventId, {
+        type: 'itemDeleted',
+        itemId: itemId,
+      });
+      
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete item" });
+    }
+  });
+
   return httpServer;
 }

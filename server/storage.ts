@@ -12,6 +12,7 @@ export interface IStorage {
   getEventItems(eventId: string): Promise<Item[]>;
   addItem(item: InsertItem): Promise<Item>;
   claimItem(itemId: number, claimedBy: string, claimedByEmail?: string): Promise<Item | undefined>;
+  deleteItem(itemId: number): Promise<boolean>;
   
   // Stats
   getEventStats(eventId: string): Promise<{
@@ -73,6 +74,15 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return item || undefined;
+  }
+
+  async deleteItem(itemId: number): Promise<boolean> {
+    const result = await db
+      .delete(items)
+      .where(eq(items.id, itemId))
+      .returning();
+    
+    return result.length > 0;
   }
 
   async getEventStats(eventId: string): Promise<{

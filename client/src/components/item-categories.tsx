@@ -1,10 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, UtensilsCrossed, Drumstick, Leaf, Cake, GlassWater, Apple } from "lucide-react";
+import { Check, UtensilsCrossed, Drumstick, Leaf, Cake, GlassWater, Apple, Trash2 } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import type { Item } from "@shared/schema";
 
 interface ItemCategoriesProps {
   items: Item[];
+  eventId: string;
 }
 
 const categoryIcons = {
@@ -31,7 +35,9 @@ const categoryColors = {
   'beverages': 'bg-blue-100 text-blue-600',
 };
 
-export default function ItemCategories({ items }: ItemCategoriesProps) {
+export default function ItemCategories({ items, eventId }: ItemCategoriesProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   // Group items by category
   const itemsByCategory = items.reduce((acc, item) => {
     if (!acc[item.category]) {
