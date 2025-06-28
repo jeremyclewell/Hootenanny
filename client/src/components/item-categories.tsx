@@ -52,19 +52,42 @@ export default function ItemCategories({ items, eventId }: ItemCategoriesProps) 
       if (!response.ok) throw new Error("Failed to delete item");
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/events", eventId, "items"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/events", eventId, "stats"] });
-      toast({
-        title: "Success",
-        description: "Item removed successfully!",
-      });
+    onMutate: async (itemId: number) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: [`/api/events/${eventId}/items`] });
+      await queryClient.cancelQueries({ queryKey: [`/api/events/${eventId}/stats`] });
+
+      // Snapshot the previous value
+      const previousItems = queryClient.getQueryData([`/api/events/${eventId}/items`]);
+      const previousStats = queryClient.getQueryData([`/api/events/${eventId}/stats`]);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData([`/api/events/${eventId}/items`], (old: any) => 
+        old ? old.filter((item: any) => item.id !== itemId) : []
+      );
+
+      // Return a context object with the snapshotted value
+      return { previousItems, previousStats };
     },
-    onError: () => {
+    onError: (err, itemId, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      queryClient.setQueryData([`/api/events/${eventId}/items`], context?.previousItems);
+      queryClient.setQueryData([`/api/events/${eventId}/stats`], context?.previousStats);
       toast({
         title: "Error",
         description: "Failed to remove item. Please try again.",
         variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure we have the correct data
+      queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/items`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/stats`] });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Item removed successfully!",
       });
     },
   });
