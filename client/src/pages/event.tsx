@@ -70,7 +70,7 @@ export default function Event() {
               <h1 className="text-2xl font-bold text-gray-900">Event Not Found</h1>
             </div>
             <p className="mt-4 text-sm text-gray-600">
-              The potluck event you're looking for doesn't exist or has been removed.
+              The shindig event you're looking for doesn't exist or has been removed.
             </p>
           </CardContent>
         </Card>
