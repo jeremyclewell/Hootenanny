@@ -155,6 +155,9 @@ export default function ClaimItemModal() {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Claim Item</DialogTitle>
+          <DialogDescription>
+            Enter your name and email to claim this item for the event.
+          </DialogDescription>
         </DialogHeader>
         
         {selectedItem && (
