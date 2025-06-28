@@ -37,7 +37,7 @@ export default function Event() {
   useEffect(() => {
     if (!lastMessage || !id) return;
 
-    if (lastMessage.type === 'itemClaimed' || lastMessage.type === 'itemAdded' || lastMessage.type === 'itemDeleted' || lastMessage.type === 'itemUpdated') {
+    if (lastMessage.type === 'itemClaimed' || lastMessage.type === 'itemAdded' || lastMessage.type === 'itemDeleted' || lastMessage.type === 'itemUpdated' || lastMessage.type === 'itemUnclaimed') {
       // Invalidate queries to refetch data
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/items`] });
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/stats`] });

@@ -12,6 +12,7 @@ export interface IStorage {
   getEventItems(eventId: string): Promise<Item[]>;
   addItem(item: InsertItem): Promise<Item>;
   claimItem(itemId: number, claimedBy: string, claimedByEmail?: string): Promise<Item | undefined>;
+  unclaimItem(itemId: number): Promise<Item | undefined>;
   updateItem(itemId: number, updates: EditItem): Promise<Item | undefined>;
   deleteItem(itemId: number): Promise<boolean>;
   
@@ -70,6 +71,20 @@ export class DatabaseStorage implements IStorage {
         claimedBy,
         claimedByEmail: claimedByEmail || null,
         claimedAt: new Date(),
+      })
+      .where(eq(items.id, itemId))
+      .returning();
+    
+    return item || undefined;
+  }
+
+  async unclaimItem(itemId: number): Promise<Item | undefined> {
+    const [item] = await db
+      .update(items)
+      .set({
+        claimedBy: null,
+        claimedByEmail: null,
+        claimedAt: null,
       })
       .where(eq(items.id, itemId))
       .returning();

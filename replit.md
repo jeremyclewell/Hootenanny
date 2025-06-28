@@ -112,6 +112,8 @@ Changelog:
 - June 27, 2025. Migrated from in-memory storage to PostgreSQL database with Drizzle ORM
 - June 27, 2025. Renamed application from "Potluck Planner" to "Shindig"
 - June 28, 2025. Renamed application from "Shindig" to "Hootenanny"
+- June 28, 2025. Added combined edit/delete functionality with dropdown menu for unclaimed items
+- June 28, 2025. Implemented unclaim functionality allowing users to remove their claims from items
 ```
 
 ## User Preferences

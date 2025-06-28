@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Check, UtensilsCrossed, Drumstick, Leaf, Cake, GlassWater, Apple, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Check, UtensilsCrossed, Drumstick, Leaf, Cake, GlassWater, Apple, MoreVertical, Pencil, Trash2, X } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -133,6 +133,67 @@ export default function ItemCategories({ items, eventId }: ItemCategoriesProps) 
     window.dispatchEvent(new CustomEvent('openEditItemModal', { detail: item }));
   };
 
+  // Unclaim item mutation
+  const unclaimItemMutation = useMutation({
+    mutationFn: async (itemId: number) => {
+      const response = await fetch(`/api/items/${itemId}/unclaim`, {
+        method: "POST",
+        body: JSON.stringify({ eventId }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      if (!response.ok) throw new Error("Failed to unclaim item");
+      return response.json();
+    },
+    onMutate: async (itemId: number) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: [`/api/events/${eventId}/items`] });
+      await queryClient.cancelQueries({ queryKey: [`/api/events/${eventId}/stats`] });
+
+      // Snapshot the previous value
+      const previousItems = queryClient.getQueryData([`/api/events/${eventId}/items`]);
+      const previousStats = queryClient.getQueryData([`/api/events/${eventId}/stats`]);
+
+      // Optimistically unclaim the item
+      queryClient.setQueryData([`/api/events/${eventId}/items`], (old: any) => 
+        old ? old.map((item: any) => 
+          item.id === itemId 
+            ? { ...item, claimedBy: null, claimedByEmail: null, claimedAt: null }
+            : item
+        ) : []
+      );
+
+      return { previousItems, previousStats };
+    },
+    onError: (err, itemId, context) => {
+      // Roll back on error
+      queryClient.setQueryData([`/api/events/${eventId}/items`], context?.previousItems);
+      queryClient.setQueryData([`/api/events/${eventId}/stats`], context?.previousStats);
+      toast({
+        title: "Error",
+        description: "Failed to unclaim item. Please try again.",
+        variant: "destructive",
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Item unclaimed successfully!",
+      });
+    },
+    onSettled: () => {
+      // Always refetch to ensure correct data
+      queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/items`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/stats`] });
+    },
+  });
+
+  const handleUnclaimItem = (e: React.MouseEvent, itemId: number) => {
+    e.stopPropagation(); // Prevent triggering claim action
+    unclaimItemMutation.mutate(itemId);
+  };
+
   const renderCategorySection = (category: string, categoryItems: Item[]) => {
     const Icon = categoryIcons[category as keyof typeof categoryIcons] || UtensilsCrossed;
     const claimed = categoryItems.filter(item => item.claimedBy).length;
@@ -197,9 +258,33 @@ export default function ItemCategories({ items, eventId }: ItemCategoriesProps) 
                   </div>
                 </div>
                 {item.claimedBy ? (
-                  <Badge className="bg-green-600 hover:bg-green-600">
-                    Claimed
-                  </Badge>
+                  <div className="flex items-center space-x-2">
+                    <Badge className="bg-green-600 hover:bg-green-600">
+                      Claimed
+                    </Badge>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-9 w-9 p-0"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={(e) => handleUnclaimItem(e, item.id)}
+                          disabled={unclaimItemMutation.isPending}
+                          className="cursor-pointer text-orange-600 focus:text-orange-600"
+                        >
+                          <X className="mr-2 h-4 w-4" />
+                          Unclaim Item
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 ) : (
                   <div className="flex items-center space-x-2">
                     <Button className="bg-primary hover:bg-primary/90">
