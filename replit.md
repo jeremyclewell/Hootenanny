@@ -1,8 +1,8 @@
-# Replit.md - Potluck Planner Application
+# Replit.md - Shindig Application
 
 ## Overview
 
-This is a full-stack potluck event management application built with React, TypeScript, Express.js, and PostgreSQL. The application allows users to create themed potluck events, manage sign-up lists, and coordinate item contributions in real-time. The system features a modern UI built with shadcn/ui components and real-time updates via WebSockets.
+This is a full-stack event management application called "Shindig" built with React, TypeScript, Express.js, and PostgreSQL. The application allows users to create themed shindig events, manage sign-up lists, and coordinate item contributions in real-time. The system features a modern UI built with shadcn/ui components and real-time updates via WebSockets.
 
 ## System Architecture
 
@@ -110,6 +110,7 @@ Changelog:
 - June 27, 2025. Initial setup
 - June 27, 2025. Added localStorage integration to remember user names/emails for repeated item claims
 - June 27, 2025. Migrated from in-memory storage to PostgreSQL database with Drizzle ORM
+- June 27, 2025. Renamed application from "Potluck Planner" to "Shindig"
 ```
 
 ## User Preferences
