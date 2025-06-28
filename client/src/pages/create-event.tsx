@@ -8,13 +8,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as DateCalendar } from "@/components/ui/calendar";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertEventSchema, type InsertEvent } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { themes } from "@/lib/theme-items";
-import { ArrowLeft, Calendar, MapPin, Users } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, MapPin, Users } from "lucide-react";
+import { format } from "date-fns";
 import { Link } from "wouter";
 
 export default function CreateEvent() {
@@ -25,11 +28,11 @@ export default function CreateEvent() {
     resolver: zodResolver(insertEventSchema),
     defaultValues: {
       title: "",
-      description: "",
+      description: null,
       theme: "",
-      date: "",
-      location: "",
-      expectedGuests: undefined,
+      date: null,
+      location: null,
+      expectedGuests: null,
     },
   });
 
@@ -135,6 +138,7 @@ export default function CreateEvent() {
                         <Textarea
                           placeholder="Join us for a fun-filled pool party! Bring your appetite and let's make this a memorable summer gathering."
                           {...field}
+                          value={field.value || ""}
                         />
                       </FormControl>
                       <FormMessage />
@@ -147,11 +151,36 @@ export default function CreateEvent() {
                     control={form.control}
                     name="date"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Date & Time (Optional)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Saturday, July 20th • 2:00 PM" {...field} />
-                        </FormControl>
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Event Date (Optional)</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={`w-full pl-3 text-left font-normal ${!field.value && "text-muted-foreground"}`}
+                              >
+                                {field.value ? (
+                                  format(new Date(field.value), "PPP")
+                                ) : (
+                                  <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <DateCalendar
+                              mode="single"
+                              selected={field.value ? new Date(field.value) : undefined}
+                              onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : null)}
+                              disabled={(date) =>
+                                date < new Date(new Date().setHours(0, 0, 0, 0))
+                              }
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
                         <FormMessage />
                       </FormItem>
                     )}
