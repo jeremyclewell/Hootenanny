@@ -8,6 +8,7 @@ import QuickStats from "@/components/quick-stats";
 import AddCustomItem from "@/components/add-custom-item";
 import ItemCategories from "@/components/item-categories";
 import ClaimItemModal from "@/components/claim-item-modal";
+import EditItemModal from "@/components/edit-item-modal";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle } from "lucide-react";
@@ -91,6 +92,7 @@ export default function Event() {
         <AddCustomItem eventId={event.id} />
         <ItemCategories items={items} eventId={event.id} />
         <ClaimItemModal />
+        <EditItemModal />
       </main>
     </div>
   );

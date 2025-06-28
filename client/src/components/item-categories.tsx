@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, UtensilsCrossed, Drumstick, Leaf, Cake, GlassWater, Apple, Trash2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Check, UtensilsCrossed, Drumstick, Leaf, Cake, GlassWater, Apple, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -127,6 +128,11 @@ export default function ItemCategories({ items, eventId }: ItemCategoriesProps) 
     deleteItemMutation.mutate(itemId);
   };
 
+  const handleEditItem = (e: React.MouseEvent, item: Item) => {
+    e.stopPropagation(); // Prevent triggering claim action
+    window.dispatchEvent(new CustomEvent('openEditItemModal', { detail: item }));
+  };
+
   const renderCategorySection = (category: string, categoryItems: Item[]) => {
     const Icon = categoryIcons[category as keyof typeof categoryIcons] || UtensilsCrossed;
     const claimed = categoryItems.filter(item => item.claimedBy).length;
@@ -199,15 +205,35 @@ export default function ItemCategories({ items, eventId }: ItemCategoriesProps) 
                     <Button className="bg-primary hover:bg-primary/90">
                       {localStorage.getItem('potluck-user-name') ? 'Claim Item' : 'Claim Item'}
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => handleDeleteItem(e, item.id)}
-                      disabled={deleteItemMutation.isPending}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-9 w-9 p-0"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={(e) => handleEditItem(e, item)}
+                          className="cursor-pointer"
+                        >
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Edit Item
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => handleDeleteItem(e, item.id)}
+                          disabled={deleteItemMutation.isPending}
+                          className="cursor-pointer text-red-600 focus:text-red-600"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete Item
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 )}
               </div>
