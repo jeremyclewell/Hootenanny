@@ -6,9 +6,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import { Share, Utensils, MapPin, Users, Calendar, CalendarPlus, Download, MailCheck } from "lucide-react";
+import { Share, Utensils, MapPin, Users, Calendar, CalendarPlus, Download, MailCheck, Hourglass } from "lucide-react";
 import type { Event } from "@shared/schema";
 import { buildGoogleCalendarUrl, downloadIcsFile } from "@/lib/calendar";
+import { formatDuration } from "@/lib/duration";
 import { SiGooglecalendar } from "react-icons/si";
 import RsvpDialog from "@/components/rsvp-dialog";
 
@@ -197,6 +198,12 @@ export default function EventHeader({ event }: EventHeaderProps) {
                   <span className="flex items-center">
                     <Users className="mr-2 h-4 w-4" />
                     {event.expectedGuests} expected guests
+                  </span>
+                )}
+                {event.pollStatus !== "polling" && event.date && (
+                  <span className="flex items-center" data-testid="text-duration">
+                    <Hourglass className="mr-2 h-4 w-4" />
+                    {formatDuration(event.durationMinutes)}
                   </span>
                 )}
               </div>

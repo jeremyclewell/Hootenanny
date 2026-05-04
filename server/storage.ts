@@ -7,7 +7,7 @@ export interface IStorage {
   // Event operations
   createEvent(event: InsertEvent): Promise<Event>;
   getEvent(id: string): Promise<Event | undefined>;
-  finalizeEventDate(id: string, date: string, time?: string | null): Promise<Event | undefined>;
+  finalizeEventDate(id: string, date: string, time?: string | null, durationMinutes?: number): Promise<Event | undefined>;
   addCandidateDates(id: string, dates: string[]): Promise<Event | undefined>;
   reopenPolling(id: string, additionalDates: string[]): Promise<Event | undefined>;
 
@@ -53,6 +53,7 @@ export class DatabaseStorage implements IStorage {
         expectedGuests: insertEvent.expectedGuests || null,
         pollStatus: insertEvent.pollStatus || "none",
         candidateDates: insertEvent.candidateDates || null,
+        durationMinutes: insertEvent.durationMinutes ?? 120,
       })
       .returning();
     return event;
@@ -63,10 +64,18 @@ export class DatabaseStorage implements IStorage {
     return event || undefined;
   }
 
-  async finalizeEventDate(id: string, date: string, time?: string | null): Promise<Event | undefined> {
+  async finalizeEventDate(id: string, date: string, time?: string | null, durationMinutes?: number): Promise<Event | undefined> {
+    const updates: { date: string; time: string | null; pollStatus: string; durationMinutes?: number } = {
+      date,
+      time: time || null,
+      pollStatus: "finalized",
+    };
+    if (typeof durationMinutes === "number") {
+      updates.durationMinutes = durationMinutes;
+    }
     const [event] = await db
       .update(events)
-      .set({ date, time: time || null, pollStatus: "finalized" })
+      .set(updates)
       .where(eq(events.id, id))
       .returning();
     return event || undefined;

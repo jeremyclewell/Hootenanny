@@ -9,7 +9,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as DateCalendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { CalendarCheck, CalendarPlus, CheckCircle2, Clock, Crown, Plus, Trophy, Users } from "lucide-react";
+import { CalendarCheck, CalendarPlus, CheckCircle2, Clock, Crown, Hourglass, Plus, Trophy, Users } from "lucide-react";
+import { DURATION_OPTIONS } from "@/lib/duration";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, parseISO } from "date-fns";
 import type { Event, DateVote } from "@shared/schema";
 
@@ -42,6 +44,7 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [hydrated, setHydrated] = useState(false);
   const [finalizeTime, setFinalizeTime] = useState<string>("");
+  const [finalizeDuration, setFinalizeDuration] = useState<number>(event.durationMinutes ?? 120);
   const [extraDates, setExtraDates] = useState<Date[]>([]);
   const [addOpen, setAddOpen] = useState(false);
 
@@ -129,6 +132,7 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
       const res = await apiRequest("POST", `/api/events/${event.id}/finalize`, {
         date,
         time: finalizeTime || null,
+        durationMinutes: finalizeDuration,
         hostToken,
       });
       return res.json();
@@ -304,8 +308,29 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
                     className="w-40"
                   />
                 </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="finalize-duration" className="flex items-center gap-2 text-sm">
+                    <Hourglass className="h-4 w-4" />
+                    How long?
+                  </Label>
+                  <Select
+                    value={String(finalizeDuration)}
+                    onValueChange={(v) => setFinalizeDuration(parseInt(v))}
+                  >
+                    <SelectTrigger id="finalize-duration" className="w-44" data-testid="select-finalize-duration">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DURATION_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={String(opt.value)}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <p className="text-xs text-gray-600">
-                  Pick a start time before locking in the date. You can leave it blank.
+                  Pick a start time and duration before locking in the date. Time can be left blank.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3 border-t border-gray-200 pt-3">

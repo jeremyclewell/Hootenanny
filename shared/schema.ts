@@ -13,6 +13,7 @@ export const events = pgTable("events", {
   expectedGuests: integer("expected_guests"),
   pollStatus: text("poll_status").default("none").notNull(),
   candidateDates: text("candidate_dates").array(),
+  durationMinutes: integer("duration_minutes").default(120).notNull(),
   hostToken: text("host_token"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -63,6 +64,7 @@ export const insertEventSchema = createInsertSchema(events)
   .extend({
     pollStatus: z.enum(["none", "polling", "finalized"]).optional(),
     candidateDates: z.array(z.string()).optional().nullable(),
+    durationMinutes: z.number().int().min(15).max(24 * 60).optional(),
   });
 
 export const insertItemSchema = createInsertSchema(items).omit({
@@ -89,6 +91,7 @@ export const submitVoteSchema = z.object({
 export const finalizeDateSchema = z.object({
   date: z.string().min(1, "Date is required"),
   time: z.string().optional().nullable(),
+  durationMinutes: z.number().int().min(15).max(24 * 60).optional(),
   hostToken: z.string().min(1, "Host token is required"),
 });
 

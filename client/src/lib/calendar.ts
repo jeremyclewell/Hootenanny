@@ -1,6 +1,10 @@
 import type { Event } from "@shared/schema";
 
-function parseEventDateTime(date: string, time?: string | null): { start: Date; end: Date } | null {
+function parseEventDateTime(
+  date: string,
+  time?: string | null,
+  durationMinutes?: number | null,
+): { start: Date; end: Date } | null {
   if (!date) return null;
 
   let start: Date;
@@ -16,7 +20,8 @@ function parseEventDateTime(date: string, time?: string | null): { start: Date; 
     start = d;
   }
 
-  const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+  const minutes = typeof durationMinutes === "number" && durationMinutes > 0 ? durationMinutes : 120;
+  const end = new Date(start.getTime() + minutes * 60 * 1000);
   return { start, end };
 }
 
@@ -36,7 +41,7 @@ function formatDateUTC(d: Date): string {
 
 export function buildGoogleCalendarUrl(event: Event): string | null {
   if (!event.date) return null;
-  const range = parseEventDateTime(event.date, event.time);
+  const range = parseEventDateTime(event.date, event.time, event.durationMinutes);
   if (!range) return null;
 
   const params = new URLSearchParams({
@@ -60,7 +65,7 @@ function escapeIcs(text: string): string {
 
 export function buildIcsContent(event: Event): string | null {
   if (!event.date) return null;
-  const range = parseEventDateTime(event.date, event.time);
+  const range = parseEventDateTime(event.date, event.time, event.durationMinutes);
   if (!range) return null;
 
   const uid = `${event.id}@hootenanny`;

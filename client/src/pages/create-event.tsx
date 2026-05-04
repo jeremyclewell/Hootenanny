@@ -17,7 +17,8 @@ import { insertEventSchema, type InsertEvent } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { themes } from "@/lib/theme-items";
-import { ArrowLeft, Calendar as CalendarIcon, MapPin, Users, Clock, PartyPopper, CalendarRange } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, MapPin, Users, Clock, PartyPopper, CalendarRange, Hourglass } from "lucide-react";
+import { DURATION_OPTIONS } from "@/lib/duration";
 import { format } from "date-fns";
 import { Link } from "wouter";
 
@@ -39,6 +40,7 @@ export default function CreateEvent() {
       time: null,
       location: null,
       expectedGuests: null,
+      durationMinutes: 120,
     },
   });
 
@@ -317,6 +319,37 @@ export default function CreateEvent() {
                               onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
                             />
                           </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="durationMinutes"
+                      render={({ field }) => (
+                        <FormItem className="md:col-span-3">
+                          <FormLabel className="flex items-center gap-2">
+                            <Hourglass className="h-4 w-4" />
+                            How long will it last?
+                          </FormLabel>
+                          <Select
+                            onValueChange={(v) => field.onChange(parseInt(v))}
+                            value={String(field.value ?? 120)}
+                          >
+                            <FormControl>
+                              <SelectTrigger data-testid="select-duration">
+                                <SelectValue placeholder="Pick a duration" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {DURATION_OPTIONS.map((opt) => (
+                                <SelectItem key={opt.value} value={String(opt.value)}>
+                                  {opt.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
