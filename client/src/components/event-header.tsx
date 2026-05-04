@@ -1,7 +1,15 @@
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import { Share, Utensils, MapPin, Users, Calendar } from "lucide-react";
+import { Share, Utensils, MapPin, Users, Calendar, CalendarPlus, Download } from "lucide-react";
 import type { Event } from "@shared/schema";
+import { buildGoogleCalendarUrl, downloadIcsFile } from "@/lib/calendar";
+import { SiGooglecalendar } from "react-icons/si";
 
 interface EventHeaderProps {
   event: Event;
@@ -77,7 +85,58 @@ export default function EventHeader({ event }: EventHeaderProps) {
                 <p className="text-sm text-gray-500">{event.title}</p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              {event.date && event.pollStatus !== "polling" && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" data-testid="button-add-to-calendar">
+                      <CalendarPlus className="mr-2 h-4 w-4" />
+                      Add to Calendar
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => {
+                        const url = buildGoogleCalendarUrl(event);
+                        if (url) {
+                          window.open(url, "_blank", "noopener,noreferrer");
+                        } else {
+                          toast({
+                            title: "Unable to add to calendar",
+                            description: "This event is missing a valid date.",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                      data-testid="menu-google-calendar"
+                    >
+                      <SiGooglecalendar className="mr-2 h-4 w-4" />
+                      Google Calendar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        const ok = downloadIcsFile(event);
+                        if (!ok) {
+                          toast({
+                            title: "Unable to add to calendar",
+                            description: "This event is missing a valid date.",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        toast({
+                          title: "Calendar file downloaded",
+                          description: "Open the .ics file to add it to Apple Calendar, Outlook, or another app.",
+                        });
+                      }}
+                      data-testid="menu-ics-download"
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Apple / Outlook (.ics)
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
               <Button onClick={handleShare} className="bg-primary hover:bg-primary/90">
                 <Share className="mr-2 h-4 w-4" />
                 Share
