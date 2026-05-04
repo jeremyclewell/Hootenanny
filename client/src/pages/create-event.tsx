@@ -21,6 +21,7 @@ import { ArrowLeft, Calendar as CalendarIcon, MapPin, Users, Clock, PartyPopper,
 import { DURATION_OPTIONS } from "@/lib/duration";
 import { format } from "date-fns";
 import { Link } from "wouter";
+import AddressAutocomplete from "@/components/address-autocomplete";
 
 type DateMode = "fixed" | "poll";
 
@@ -417,7 +418,11 @@ export default function CreateEvent() {
                         Location <span className="text-muted-foreground font-normal">(optional)</span>
                       </FormLabel>
                       <FormControl>
-                        <Input placeholder="123 Summer Lane, Poolside" {...field} value={field.value || ""} />
+                        <AddressAutocomplete
+                          value={field.value || ""}
+                          onChange={(v) => field.onChange(v || null)}
+                          placeholder="123 Summer Lane, Poolside"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
