@@ -16,7 +16,9 @@ import RsvpCta from "@/components/rsvp-cta";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle } from "lucide-react";
-import type { Event, Item } from "@shared/schema";
+import type { Event, Item, Rsvp } from "@shared/schema";
+
+type PublicRsvp = Omit<Rsvp, "guestEmail">;
 
 interface EventStats {
   total: number;
@@ -55,6 +57,11 @@ export default function Event() {
 
   const statsQuery = useQuery<EventStats>({
     queryKey: [`/api/events/${id}/stats`],
+    enabled: !!id && !isPolling,
+  });
+
+  const rsvpsQuery = useQuery<PublicRsvp[]>({
+    queryKey: [`/api/events/${id}/rsvps`],
     enabled: !!id && !isPolling,
   });
 
@@ -131,6 +138,11 @@ export default function Event() {
   const event = eventQuery.data;
   const items = itemsQuery.data || [];
   const stats = statsQuery.data || { total: 0, claimed: 0, available: 0, custom: 0 };
+  const rsvps = rsvpsQuery.data || [];
+  const rsvpStats = {
+    going: rsvps.filter((r) => r.response === "yes").length,
+    maybe: rsvps.filter((r) => r.response === "maybe").length,
+  };
   const isHost = !!hostToken;
 
   return (
@@ -146,7 +158,7 @@ export default function Event() {
             {isHost && event.pollStatus === "finalized" && (
               <ReopenPollBanner event={event} hostToken={hostToken} />
             )}
-            <QuickStats stats={stats} />
+            <QuickStats stats={stats} rsvpStats={rsvpStats} />
             <RsvpList eventId={event.id} isHost={isHost} />
             <AddCustomItem eventId={event.id} />
             <ItemCategories items={items} eventId={event.id} />
