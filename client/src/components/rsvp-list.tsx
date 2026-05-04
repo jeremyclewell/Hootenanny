@@ -1,12 +1,16 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Check, HelpCircle, X, UserCheck, UserX } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Check, HelpCircle, X, UserCheck, UserX, Trash2 } from "lucide-react";
 import type { Rsvp, DateVote, Item } from "@shared/schema";
 
 interface RsvpListProps {
   eventId: string;
   isHost: boolean;
+  hostToken?: string | null;
 }
 
 type PublicRsvp = Omit<Rsvp, "guestEmail">;
@@ -46,7 +50,8 @@ function normalize(name: string) {
   return name.trim().toLowerCase();
 }
 
-export default function RsvpList({ eventId, isHost }: RsvpListProps) {
+export default function RsvpList({ eventId, isHost, hostToken }: RsvpListProps) {
+  const { toast } = useToast();
   const rsvpsQuery = useQuery<PublicRsvp[]>({
     queryKey: [`/api/events/${eventId}/rsvps`],
   });
@@ -60,6 +65,41 @@ export default function RsvpList({ eventId, isHost }: RsvpListProps) {
     queryKey: [`/api/events/${eventId}/items`],
     enabled: isHost,
   });
+
+  const removeRsvp = useMutation({
+    mutationFn: async (rsvpId: number) => {
+      const res = await apiRequest(
+        "DELETE",
+        `/api/events/${eventId}/rsvps/${rsvpId}`,
+        { hostToken: hostToken || "" }
+      );
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/rsvps`] });
+      toast({
+        title: "RSVP removed",
+        description: "That entry has been taken off the list.",
+      });
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : "Please try again.";
+      toast({
+        title: "Could not remove RSVP",
+        description: message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleHostRemove = (rsvp: PublicRsvp) => {
+    if (!isHost || !hostToken) return;
+    const ok = window.confirm(
+      `Remove ${rsvp.guestName}'s RSVP from this event? They can RSVP again later.`
+    );
+    if (!ok) return;
+    removeRsvp.mutate(rsvp.id);
+  };
 
   const rsvps = rsvpsQuery.data || [];
 
@@ -138,10 +178,24 @@ export default function RsvpList({ eventId, isHost }: RsvpListProps) {
                     {group.people.map((p) => (
                       <li
                         key={p.id}
-                        className="truncate text-sm text-gray-700"
+                        className="flex items-center justify-between gap-2 text-sm text-gray-700"
                         data-testid={`rsvp-name-${p.id}`}
                       >
-                        {p.guestName}
+                        <span className="truncate">{p.guestName}</span>
+                        {isHost && hostToken && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 shrink-0 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                            onClick={() => handleHostRemove(p)}
+                            disabled={removeRsvp.isPending}
+                            aria-label={`Remove ${p.guestName}'s RSVP`}
+                            data-testid={`button-remove-rsvp-${p.id}`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                       </li>
                     ))}
                   </ul>

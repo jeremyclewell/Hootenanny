@@ -88,7 +88,7 @@ export default function Event() {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/votes`] });
     }
 
-    if (lastMessage.type === "rsvpSubmitted") {
+    if (lastMessage.type === "rsvpSubmitted" || lastMessage.type === "rsvpDeleted") {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/rsvps`] });
     }
 
@@ -180,7 +180,7 @@ export default function Event() {
               <ReopenPollBanner event={event} hostToken={hostToken} />
             )}
             <QuickStats stats={stats} rsvpStats={rsvpStats} />
-            <RsvpList eventId={event.id} isHost={isHost} />
+            <RsvpList eventId={event.id} isHost={isHost} hostToken={hostToken} />
             <AddCustomItem eventId={event.id} />
             <ItemCategories items={items} eventId={event.id} />
             <ClaimItemModal />

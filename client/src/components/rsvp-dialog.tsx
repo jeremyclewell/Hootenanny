@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -8,12 +8,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Check, HelpCircle, X, MailCheck } from "lucide-react";
-import type { RsvpResponse } from "@shared/schema";
+import { Check, HelpCircle, X, MailCheck, Trash2 } from "lucide-react";
+import type { Rsvp, RsvpResponse } from "@shared/schema";
 
 interface RsvpDialogProps {
   eventId: string;
@@ -21,6 +22,8 @@ interface RsvpDialogProps {
 }
 
 const STORAGE_KEY = "hootenanny-voter";
+
+type PublicRsvp = Omit<Rsvp, "guestEmail">;
 
 interface StoredGuest {
   name: string;
@@ -80,6 +83,25 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
     }
   }, [open]);
 
+  const rsvpsQuery = useQuery<PublicRsvp[]>({
+    queryKey: [`/api/events/${eventId}/rsvps`],
+    enabled: open,
+  });
+
+  // The public RSVP list omits emails, so we can only match by name.
+  // To avoid offering "Remove my RSVP" against the wrong entry when two
+  // guests share a name, only surface removal when the name match is
+  // unambiguous (exactly one RSVP). The server still re-validates the
+  // owner using name + email before deleting.
+  const myRsvp = useMemo(() => {
+    const name = guest.name.trim().toLowerCase();
+    if (!name) return undefined;
+    const matches = (rsvpsQuery.data || []).filter(
+      (r) => r.guestName.trim().toLowerCase() === name
+    );
+    return matches.length === 1 ? matches[0] : undefined;
+  }, [rsvpsQuery.data, guest.name]);
+
   const submit = useMutation({
     mutationFn: async (chosen: RsvpResponse) => {
       const payload: { guestName: string; response: RsvpResponse; guestEmail?: string } = {
@@ -116,6 +138,39 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
     },
   });
 
+  const remove = useMutation({
+    mutationFn: async () => {
+      if (!myRsvp) throw new Error("No RSVP to remove");
+      const payload: { guestName: string; guestEmail?: string } = {
+        guestName: guest.name.trim(),
+      };
+      const trimmedEmail = guest.email.trim();
+      if (trimmedEmail) payload.guestEmail = trimmedEmail;
+      const res = await apiRequest(
+        "DELETE",
+        `/api/events/${eventId}/rsvps/${myRsvp.id}`,
+        payload
+      );
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/rsvps`] });
+      toast({
+        title: "RSVP removed",
+        description: "You're no longer on the attendee list.",
+      });
+      setOpen(false);
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : "Please try again.";
+      toast({
+        title: "Could not remove RSVP",
+        description: message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const tryPick = (chosen: RsvpResponse) => {
     if (!guest.name.trim()) {
       toast({
@@ -128,6 +183,8 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
     setResponse(chosen);
     submit.mutate(chosen);
   };
+
+  const busy = submit.isPending || remove.isPending;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -179,7 +236,7 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
                     data-selected={selected}
                     data-testid={`rsvp-option-${opt.value}`}
                     onClick={() => tryPick(opt.value)}
-                    disabled={submit.isPending}
+                    disabled={busy}
                     className={`flex items-center gap-3 rounded-md border p-3 text-left text-sm font-medium transition disabled:opacity-60 ${opt.classes}`}
                   >
                     <Icon className="h-4 w-4" />
@@ -192,6 +249,26 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
               Tap a response to save it instantly. You can change it anytime.
             </p>
           </div>
+
+          {myRsvp && (
+            <div className="border-t pt-4">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full justify-center text-red-600 hover:bg-red-50 hover:text-red-700"
+                onClick={() => remove.mutate()}
+                disabled={busy}
+                data-testid="button-remove-my-rsvp"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                {remove.isPending ? "Removing..." : "Remove my RSVP"}
+              </Button>
+              <p className="mt-1 text-center text-xs text-gray-500">
+                Takes you off the attendee list entirely.
+              </p>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

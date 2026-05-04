@@ -34,6 +34,8 @@ export interface IStorage {
   // RSVPs
   getEventRsvps(eventId: string): Promise<Rsvp[]>;
   upsertRsvp(eventId: string, rsvp: SubmitRsvp): Promise<Rsvp>;
+  getRsvp(rsvpId: number): Promise<Rsvp | undefined>;
+  deleteRsvp(rsvpId: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -274,6 +276,16 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return created;
+  }
+
+  async getRsvp(rsvpId: number): Promise<Rsvp | undefined> {
+    const [rsvp] = await db.select().from(rsvps).where(eq(rsvps.id, rsvpId));
+    return rsvp || undefined;
+  }
+
+  async deleteRsvp(rsvpId: number): Promise<boolean> {
+    const result = await db.delete(rsvps).where(eq(rsvps.id, rsvpId)).returning();
+    return result.length > 0;
   }
 }
 

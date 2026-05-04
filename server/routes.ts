@@ -308,6 +308,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete an RSVP. A guest can remove their own (matching name + optional
+  // email) or the host can remove any entry by passing a valid hostToken.
+  app.delete("/api/events/:id/rsvps/:rsvpId", async (req, res) => {
+    try {
+      const eventId = req.params.id;
+      const rsvpId = parseInt(req.params.rsvpId, 10);
+      if (Number.isNaN(rsvpId)) {
+        return res.status(400).json({ message: "Invalid RSVP id" });
+      }
+
+      const event = await storage.getEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      const rsvp = await storage.getRsvp(rsvpId);
+      if (!rsvp || rsvp.eventId !== eventId) {
+        return res.status(404).json({ message: "RSVP not found" });
+      }
+
+      const { hostToken, guestName, guestEmail } = (req.body || {}) as {
+        hostToken?: string;
+        guestName?: string;
+        guestEmail?: string;
+      };
+
+      const isHost = !!hostToken && hostToken === event.hostToken;
+      const norm = (s: string | null | undefined) => (s || "").trim().toLowerCase();
+      const isOwner =
+        !!guestName &&
+        norm(guestName) === norm(rsvp.guestName) &&
+        norm(guestEmail) === norm(rsvp.guestEmail);
+
+      if (!isHost && !isOwner) {
+        return res
+          .status(403)
+          .json({ message: "Not allowed to remove this RSVP" });
+      }
+
+      const success = await storage.deleteRsvp(rsvpId);
+      if (!success) {
+        return res.status(500).json({ message: "Failed to delete RSVP" });
+      }
+
+      broadcastToEvent(eventId, {
+        type: "rsvpDeleted",
+        rsvpId,
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete RSVP" });
+    }
+  });
+
   // Add custom item
   app.post("/api/events/:id/items", async (req, res) => {
     try {
