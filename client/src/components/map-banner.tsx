@@ -126,12 +126,16 @@ export default function MapBackground({ location }: MapBackgroundProps) {
       <div
         style={{
           position: "absolute",
-          width: "130%",
-          height: "130%",
+          /* wider than viewport so the bottom corners still fill
+             as the bottom fans out toward the viewer */
+          width: "140%",
+          height: "110%",
           top: 0,
-          left: "-15%",
+          left: "-20%",
+          /* pivot at the TOP — top edge stays at 100% width,
+             bottom swings toward viewer and appears ~150% wide */
           transformOrigin: "top center",
-          transform: "perspective(700px) rotateX(-20deg)",
+          transform: "perspective(900px) rotateX(22deg)",
         }}
       >
         <div
