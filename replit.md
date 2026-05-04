@@ -40,8 +40,18 @@ This is a full-stack event management application called "Hootenanny" built with
 - **Request Handling**: RESTful API with JSON responses
 
 ### Database Schema
-- **Events Table**: Stores potluck event information (id, title, description, theme, date, location, expectedGuests)
+- **Events Table**: Stores potluck event information (id, title, description, theme, date, location, expectedGuests, pollStatus, candidateDates, hostToken)
 - **Items Table**: Manages item sign-ups with foreign key to events (id, eventId, name, category, isCustom, claimedBy, claimedByEmail)
+- **Date Votes Table**: Tracks invitee availability for polling events (id, eventId, voterName, voterEmail, selectedDates)
+
+### Date Polling
+- Hosts can create an event in either "fixed date" or "polling" mode
+- In polling mode, the host picks 2+ candidate dates within a 4-week window
+- Invitees visit the shared link and check off the dates that work for them (name + optional email, prefilled from localStorage)
+- Each event has a `hostToken` returned only to the creator and saved in localStorage; the host UI (finalize buttons) only appears for browsers holding the matching token
+- The host sees a vote tally per candidate date with the leading date(s) highlighted, and finalizes one with a single click
+- Finalizing seeds the theme items and switches the event into the normal item sign-up flow
+- Vote submissions and date finalization are broadcast over WebSocket for real-time updates
 
 ## Data Flow
 

@@ -93,6 +93,12 @@ export default function EventHeader({ event }: EventHeaderProps) {
                   {event.date && (
                     <p className="text-gray-600">{event.date}</p>
                   )}
+                  {event.pollStatus === "polling" && (
+                    <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                      <Calendar className="h-3 w-3" />
+                      Date being chosen by guests
+                    </span>
+                  )}
                 </div>
               </div>
               {event.description && (

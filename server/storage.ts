@@ -1,13 +1,14 @@
-import { events, items, type Event, type InsertEvent, type Item, type InsertItem, type EditItem } from "@shared/schema";
+import { events, items, dateVotes, type Event, type InsertEvent, type Item, type InsertItem, type EditItem, type DateVote, type SubmitVote } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export interface IStorage {
   // Event operations
   createEvent(event: InsertEvent): Promise<Event>;
   getEvent(id: string): Promise<Event | undefined>;
-  
+  finalizeEventDate(id: string, date: string): Promise<Event | undefined>;
+
   // Item operations
   getEventItems(eventId: string): Promise<Item[]>;
   addItem(item: InsertItem): Promise<Item>;
@@ -15,7 +16,7 @@ export interface IStorage {
   unclaimItem(itemId: number): Promise<Item | undefined>;
   updateItem(itemId: number, updates: EditItem): Promise<Item | undefined>;
   deleteItem(itemId: number): Promise<boolean>;
-  
+
   // Stats
   getEventStats(eventId: string): Promise<{
     total: number;
@@ -23,20 +24,28 @@ export interface IStorage {
     available: number;
     custom: number;
   }>;
+
+  // Date polling
+  getEventVotes(eventId: string): Promise<DateVote[]>;
+  upsertVote(eventId: string, vote: SubmitVote): Promise<DateVote>;
 }
 
 export class DatabaseStorage implements IStorage {
   async createEvent(insertEvent: InsertEvent): Promise<Event> {
     const id = nanoid();
+    const hostToken = nanoid(32);
     const [event] = await db
       .insert(events)
       .values({
         ...insertEvent,
         id,
+        hostToken,
         date: insertEvent.date || null,
         description: insertEvent.description || null,
         location: insertEvent.location || null,
         expectedGuests: insertEvent.expectedGuests || null,
+        pollStatus: insertEvent.pollStatus || "none",
+        candidateDates: insertEvent.candidateDates || null,
       })
       .returning();
     return event;
@@ -44,6 +53,15 @@ export class DatabaseStorage implements IStorage {
 
   async getEvent(id: string): Promise<Event | undefined> {
     const [event] = await db.select().from(events).where(eq(events.id, id));
+    return event || undefined;
+  }
+
+  async finalizeEventDate(id: string, date: string): Promise<Event | undefined> {
+    const [event] = await db
+      .update(events)
+      .set({ date, pollStatus: "finalized" })
+      .where(eq(events.id, id))
+      .returning();
     return event || undefined;
   }
 
@@ -74,7 +92,7 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(items.id, itemId))
       .returning();
-    
+
     return item || undefined;
   }
 
@@ -88,7 +106,7 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(items.id, itemId))
       .returning();
-    
+
     return item || undefined;
   }
 
@@ -101,7 +119,7 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(items.id, itemId))
       .returning();
-    
+
     return item || undefined;
   }
 
@@ -110,14 +128,14 @@ export class DatabaseStorage implements IStorage {
       .delete(items)
       .where(eq(items.id, itemId))
       .returning();
-    
+
     return result.length > 0;
   }
 
   async getEventStats(eventId: string): Promise<{
     total: number;
     claimed: number;
-    available: number; 
+    available: number;
     custom: number;
   }> {
     const eventItems = await this.getEventItems(eventId);
@@ -127,6 +145,47 @@ export class DatabaseStorage implements IStorage {
     const custom = eventItems.filter(item => item.isCustom).length;
 
     return { total, claimed, available, custom };
+  }
+
+  async getEventVotes(eventId: string): Promise<DateVote[]> {
+    return await db.select().from(dateVotes).where(eq(dateVotes.eventId, eventId));
+  }
+
+  async upsertVote(eventId: string, vote: SubmitVote): Promise<DateVote> {
+    const email = vote.voterEmail || "";
+    const existing = await db
+      .select()
+      .from(dateVotes)
+      .where(eq(dateVotes.eventId, eventId));
+
+    const match = existing.find(
+      (v) =>
+        v.voterName.trim().toLowerCase() === vote.voterName.trim().toLowerCase() &&
+        (v.voterEmail || "").trim().toLowerCase() === email.trim().toLowerCase()
+    );
+
+    if (match) {
+      const [updated] = await db
+        .update(dateVotes)
+        .set({
+          selectedDates: vote.selectedDates,
+          updatedAt: new Date(),
+        })
+        .where(eq(dateVotes.id, match.id))
+        .returning();
+      return updated;
+    }
+
+    const [created] = await db
+      .insert(dateVotes)
+      .values({
+        eventId,
+        voterName: vote.voterName,
+        voterEmail: email || null,
+        selectedDates: vote.selectedDates,
+      })
+      .returning();
+    return created;
   }
 }
 
