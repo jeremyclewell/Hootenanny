@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { insertEventSchema, insertItemSchema, claimItemSchema, editItemSchema, submitVoteSchema, finalizeDateSchema } from "@shared/schema";
+import { insertEventSchema, insertItemSchema, claimItemSchema, editItemSchema, submitVoteSchema, finalizeDateSchema, type Event } from "@shared/schema";
 import { getThemeItems } from "../client/src/lib/theme-items";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -40,9 +40,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Strip the host token from event responses sent over the wire
-  function publicEvent(event: any) {
+  function publicEvent(event: Event): Omit<Event, "hostToken">;
+  function publicEvent(event: Event | undefined): Omit<Event, "hostToken"> | undefined;
+  function publicEvent(event: Event | undefined): Omit<Event, "hostToken"> | undefined {
     if (!event) return event;
-    const { hostToken, ...rest } = event;
+    const { hostToken: _hostToken, ...rest } = event;
     return rest;
   }
 

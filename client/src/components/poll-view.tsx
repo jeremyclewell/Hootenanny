@@ -106,10 +106,11 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
         description: "Guests can now sign up for items.",
       });
     },
-    onError: (err: any) => {
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : "Please try again.";
       toast({
         title: "Could not finalize",
-        description: err?.message || "Please try again.",
+        description: message,
         variant: "destructive",
       });
     },
