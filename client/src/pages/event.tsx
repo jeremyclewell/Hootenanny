@@ -4,7 +4,7 @@ import { useWebSocket } from "@/lib/websocket";
 import { queryClient } from "@/lib/queryClient";
 import { useEffect, useState } from "react";
 import EventHeader from "@/components/event-header";
-import MapBanner from "@/components/map-banner";
+import MapBackground from "@/components/map-banner";
 import QuickStats from "@/components/quick-stats";
 import AddCustomItem from "@/components/add-custom-item";
 import ItemCategories from "@/components/item-categories";
@@ -140,47 +140,50 @@ export default function EventPage() {
   const isHost = isHostView;
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Map banner sits at the top — the sticky nav scrolls over it */}
-      {event.location && <MapBanner location={event.location} />}
+    <>
+      {/* Fixed map sits behind everything when a location is set */}
+      {event.location && <MapBackground location={event.location} />}
 
-      <EventHeader event={event} />
+      {/* Page content sits above the map — no solid background on the outer wrapper */}
+      <div className="min-h-screen relative" style={{ zIndex: 1 }}>
+        <EventHeader event={event} />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-        {isPolling ? (
-          <div className="space-y-8">
-            <PollView event={event} isHost={isHost} hostToken={hostToken} />
-            {isHost && (
-              <section className="space-y-4">
-                <div className="rounded-2xl border border-teal-100 bg-teal-50 p-5">
-                  <h3 className="font-serif font-semibold text-foreground mb-1">
-                    Set up your menu while you wait
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Add, edit, or remove food and drink items now — guests will be able to claim
-                    them as soon as you lock in a date.
-                  </p>
-                </div>
-                <AddCustomItem eventId={event.id} />
-                <ItemCategories items={items} eventId={event.id} />
-              </section>
-            )}
-          </div>
-        ) : (
-          <>
-            <RsvpCta eventId={event.id} eventTitle={event.title} />
-            {isHost && event.pollStatus === "finalized" && (
-              <ReopenPollBanner event={event} hostToken={hostToken} />
-            )}
-            <QuickStats stats={stats} rsvpStats={rsvpStats} />
-            <RsvpList eventId={event.id} isHost={isHost} hostToken={hostToken} />
-            <AddCustomItem eventId={event.id} />
-            <ItemCategories items={items} eventId={event.id} />
-            <ClaimItemModal />
-            <EditItemModal />
-          </>
-        )}
-      </main>
-    </div>
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+          {isPolling ? (
+            <div className="space-y-8">
+              <PollView event={event} isHost={isHost} hostToken={hostToken} />
+              {isHost && (
+                <section className="space-y-4">
+                  <div className="rounded-2xl border border-teal-100 bg-teal-50 p-5">
+                    <h3 className="font-serif font-semibold text-foreground mb-1">
+                      Set up your menu while you wait
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Add, edit, or remove food and drink items now — guests will be able to claim
+                      them as soon as you lock in a date.
+                    </p>
+                  </div>
+                  <AddCustomItem eventId={event.id} />
+                  <ItemCategories items={items} eventId={event.id} />
+                </section>
+              )}
+            </div>
+          ) : (
+            <>
+              <RsvpCta eventId={event.id} eventTitle={event.title} />
+              {isHost && event.pollStatus === "finalized" && (
+                <ReopenPollBanner event={event} hostToken={hostToken} />
+              )}
+              <QuickStats stats={stats} rsvpStats={rsvpStats} />
+              <RsvpList eventId={event.id} isHost={isHost} hostToken={hostToken} />
+              <AddCustomItem eventId={event.id} />
+              <ItemCategories items={items} eventId={event.id} />
+              <ClaimItemModal />
+              <EditItemModal />
+            </>
+          )}
+        </main>
+      </div>
+    </>
   );
 }
