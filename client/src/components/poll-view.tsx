@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as DateCalendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { CalendarCheck, CheckCircle2, Clock, Crown, Trophy, Users } from "lucide-react";
+import { CalendarCheck, CalendarPlus, CheckCircle2, Clock, Crown, Plus, Trophy, Users } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import type { Event, DateVote } from "@shared/schema";
 
@@ -40,6 +42,12 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [hydrated, setHydrated] = useState(false);
   const [finalizeTime, setFinalizeTime] = useState<string>("");
+  const [extraDates, setExtraDates] = useState<Date[]>([]);
+  const [addOpen, setAddOpen] = useState(false);
+
+  const today = new Date(new Date().setHours(0, 0, 0, 0));
+  const fourWeeksOut = new Date(today);
+  fourWeeksOut.setDate(fourWeeksOut.getDate() + 28);
 
   const votesQuery = useQuery<DateVote[]>({
     queryKey: [`/api/events/${event.id}/votes`],
@@ -84,6 +92,32 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
     onError: () => {
       toast({
         title: "Could not save",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const addDatesMutation = useMutation({
+    mutationFn: async (dates: string[]) => {
+      const res = await apiRequest("POST", `/api/events/${event.id}/candidate-dates`, {
+        hostToken,
+        dates,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/events/${event.id}`] });
+      setExtraDates([]);
+      setAddOpen(false);
+      toast({
+        title: "Dates added",
+        description: "Guests can now vote on the new dates too.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Could not add dates",
         description: "Please try again.",
         variant: "destructive",
       });
@@ -155,11 +189,13 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
         <CardContent className="flex items-start gap-3 pt-6">
           <CalendarCheck className="mt-1 h-5 w-5 text-primary" />
           <div>
-            <p className="font-semibold text-gray-900">Picking a date together</p>
+            <p className="font-semibold text-gray-900">
+              Polling is open — picking a date together
+            </p>
             <p className="text-sm text-gray-700">
               {isHost
-                ? "Share the link with your guests so they can mark which dates work for them. Pick the winning date when you're ready."
-                : "The host hasn't locked in a date yet. Mark the dates that work for you below."}
+                ? "Share the link with your guests so they can mark which dates work for them. You can add more candidate dates anytime, then pick the winning date when you're ready."
+                : "The host hasn't locked in a date yet. Mark the dates that work for you below — and check back, the host might add more options."}
             </p>
           </div>
         </CardContent>
@@ -253,23 +289,82 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
         </CardHeader>
         <CardContent className="space-y-3">
           {isHost && (
-            <div className="flex flex-wrap items-end gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="finalize-time" className="flex items-center gap-2 text-sm">
-                  <Clock className="h-4 w-4" />
-                  Event time (optional)
-                </Label>
-                <Input
-                  id="finalize-time"
-                  type="time"
-                  value={finalizeTime}
-                  onChange={(e) => setFinalizeTime(e.target.value)}
-                  className="w-40"
-                />
+            <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="finalize-time" className="flex items-center gap-2 text-sm">
+                    <Clock className="h-4 w-4" />
+                    Event time (optional)
+                  </Label>
+                  <Input
+                    id="finalize-time"
+                    type="time"
+                    value={finalizeTime}
+                    onChange={(e) => setFinalizeTime(e.target.value)}
+                    className="w-40"
+                  />
+                </div>
+                <p className="text-xs text-gray-600">
+                  Pick a start time before locking in the date. You can leave it blank.
+                </p>
               </div>
-              <p className="text-xs text-gray-600">
-                Pick a start time before locking in the date. You can leave it blank.
-              </p>
+              <div className="flex flex-wrap items-center gap-3 border-t border-gray-200 pt-3">
+                <Popover open={addOpen} onOpenChange={setAddOpen}>
+                  <PopoverTrigger asChild>
+                    <Button size="sm" variant="outline" data-testid="button-add-candidate-dates">
+                      <CalendarPlus className="mr-2 h-4 w-4" />
+                      Add more candidate dates
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-3" align="start">
+                    <p className="mb-2 text-xs text-gray-600">
+                      Pick any extra days you'd like to offer guests.
+                    </p>
+                    <DateCalendar
+                      mode="multiple"
+                      selected={extraDates}
+                      onSelect={(days) => setExtraDates(days || [])}
+                      disabled={(date) => {
+                        if (date < today) return true;
+                        const iso = format(date, "yyyy-MM-dd");
+                        return candidateDates.includes(iso);
+                      }}
+                      fromDate={today}
+                      toDate={fourWeeksOut}
+                      numberOfMonths={1}
+                    />
+                    <div className="mt-3 flex justify-end gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setExtraDates([]);
+                          setAddOpen(false);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        disabled={extraDates.length === 0 || addDatesMutation.isPending}
+                        onClick={() => {
+                          const iso = extraDates
+                            .map((d) => format(d, "yyyy-MM-dd"))
+                            .filter((d) => !candidateDates.includes(d));
+                          if (iso.length === 0) return;
+                          addDatesMutation.mutate(iso);
+                        }}
+                      >
+                        <Plus className="mr-1 h-4 w-4" />
+                        {addDatesMutation.isPending ? "Adding..." : `Add ${extraDates.length || ""}`.trim()}
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <p className="text-xs text-gray-600">
+                  Existing votes are preserved when you add new dates.
+                </p>
+              </div>
             </div>
           )}
           {tally.length === 0 && (

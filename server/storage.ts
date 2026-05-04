@@ -8,6 +8,8 @@ export interface IStorage {
   createEvent(event: InsertEvent): Promise<Event>;
   getEvent(id: string): Promise<Event | undefined>;
   finalizeEventDate(id: string, date: string, time?: string | null): Promise<Event | undefined>;
+  addCandidateDates(id: string, dates: string[]): Promise<Event | undefined>;
+  reopenPolling(id: string, additionalDates: string[]): Promise<Event | undefined>;
 
   // Item operations
   getEventItems(eventId: string): Promise<Item[]>;
@@ -61,6 +63,37 @@ export class DatabaseStorage implements IStorage {
     const [event] = await db
       .update(events)
       .set({ date, time: time || null, pollStatus: "finalized" })
+      .where(eq(events.id, id))
+      .returning();
+    return event || undefined;
+  }
+
+  async addCandidateDates(id: string, dates: string[]): Promise<Event | undefined> {
+    const existing = await this.getEvent(id);
+    if (!existing) return undefined;
+    const merged = Array.from(new Set([...(existing.candidateDates || []), ...dates])).sort();
+    const [event] = await db
+      .update(events)
+      .set({ candidateDates: merged })
+      .where(eq(events.id, id))
+      .returning();
+    return event || undefined;
+  }
+
+  async reopenPolling(id: string, additionalDates: string[]): Promise<Event | undefined> {
+    const existing = await this.getEvent(id);
+    if (!existing) return undefined;
+    const base = existing.candidateDates || [];
+    const withCurrent = existing.date ? [...base, existing.date] : base;
+    const merged = Array.from(new Set([...withCurrent, ...additionalDates])).sort();
+    const [event] = await db
+      .update(events)
+      .set({
+        pollStatus: "polling",
+        date: null,
+        time: null,
+        candidateDates: merged,
+      })
       .where(eq(events.id, id))
       .returning();
     return event || undefined;

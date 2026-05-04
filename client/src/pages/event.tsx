@@ -10,6 +10,7 @@ import ItemCategories from "@/components/item-categories";
 import ClaimItemModal from "@/components/claim-item-modal";
 import EditItemModal from "@/components/edit-item-modal";
 import PollView from "@/components/poll-view";
+import ReopenPollBanner from "@/components/reopen-poll-banner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle } from "lucide-react";
@@ -74,10 +75,15 @@ export default function Event() {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/votes`] });
     }
 
-    if (lastMessage.type === "dateFinalized") {
+    if (lastMessage.type === "dateFinalized" || lastMessage.type === "pollReopened") {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/items`] });
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/stats`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/votes`] });
+    }
+
+    if (lastMessage.type === "candidateDatesUpdated") {
+      queryClient.invalidateQueries({ queryKey: [`/api/events/${id}`] });
     }
   }, [lastMessage, id]);
 
@@ -130,6 +136,9 @@ export default function Event() {
           <PollView event={event} isHost={isHost} hostToken={hostToken} />
         ) : (
           <>
+            {isHost && event.pollStatus === "finalized" && (
+              <ReopenPollBanner event={event} hostToken={hostToken} />
+            )}
             <QuickStats stats={stats} />
             <AddCustomItem eventId={event.id} />
             <ItemCategories items={items} eventId={event.id} />

@@ -75,6 +75,16 @@ export const finalizeDateSchema = z.object({
   hostToken: z.string().min(1, "Host token is required"),
 });
 
+export const addCandidateDatesSchema = z.object({
+  hostToken: z.string().min(1, "Host token is required"),
+  dates: z.array(z.string().min(1)).min(1, "Add at least one date"),
+});
+
+export const reopenPollSchema = z.object({
+  hostToken: z.string().min(1, "Host token is required"),
+  additionalDates: z.array(z.string().min(1)).default([]),
+});
+
 export type Event = typeof events.$inferSelect;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
 export type Item = typeof items.$inferSelect;

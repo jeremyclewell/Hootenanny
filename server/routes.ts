@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { insertEventSchema, insertItemSchema, claimItemSchema, editItemSchema, submitVoteSchema, finalizeDateSchema, type Event } from "@shared/schema";
+import { insertEventSchema, insertItemSchema, claimItemSchema, editItemSchema, submitVoteSchema, finalizeDateSchema, addCandidateDatesSchema, reopenPollSchema, type Event } from "@shared/schema";
 import { getThemeItems } from "../client/src/lib/theme-items";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -206,6 +206,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(publicEvent(updated));
     } catch (error) {
       res.status(400).json({ message: "Invalid finalize data" });
+    }
+  });
+
+  // Add additional candidate dates to an active poll (host only)
+  app.post("/api/events/:id/candidate-dates", async (req, res) => {
+    try {
+      const { hostToken, dates } = addCandidateDatesSchema.parse(req.body);
+
+      const event = await storage.getEvent(req.params.id);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      if (event.hostToken !== hostToken) {
+        return res.status(403).json({ message: "Only the event host can edit candidate dates" });
+      }
+      if (event.pollStatus !== "polling") {
+        return res.status(400).json({ message: "This event is not in polling mode" });
+      }
+
+      const updated = await storage.addCandidateDates(req.params.id, dates);
+      if (!updated) {
+        return res.status(500).json({ message: "Failed to add candidate dates" });
+      }
+
+      broadcastToEvent(req.params.id, {
+        type: "candidateDatesUpdated",
+        event: publicEvent(updated),
+      });
+
+      res.json(publicEvent(updated));
+    } catch (error) {
+      res.status(400).json({ message: "Invalid candidate dates data" });
+    }
+  });
+
+  // Reopen polling on a finalized event (host only). Preserves prior votes
+  // and items; the previously finalized date is rolled back into the
+  // candidate set so prior votes remain meaningful.
+  app.post("/api/events/:id/reopen", async (req, res) => {
+    try {
+      const { hostToken, additionalDates } = reopenPollSchema.parse(req.body);
+
+      const event = await storage.getEvent(req.params.id);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      if (event.hostToken !== hostToken) {
+        return res.status(403).json({ message: "Only the event host can reopen polling" });
+      }
+      if (event.pollStatus !== "finalized") {
+        return res.status(400).json({ message: "This event is not finalized" });
+      }
+
+      const updated = await storage.reopenPolling(req.params.id, additionalDates);
+      if (!updated) {
+        return res.status(500).json({ message: "Failed to reopen polling" });
+      }
+
+      broadcastToEvent(req.params.id, {
+        type: "pollReopened",
+        event: publicEvent(updated),
+      });
+
+      res.json(publicEvent(updated));
+    } catch (error) {
+      res.status(400).json({ message: "Invalid reopen data" });
     }
   });
 
