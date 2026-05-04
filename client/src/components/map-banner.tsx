@@ -106,24 +106,48 @@ export default function MapBackground({ location }: MapBackgroundProps) {
   if (!show) return null;
 
   return (
+    /* Outer fixed frame — clips the perspective overflow */
     <div
-      className="fixed inset-0 pointer-events-none select-none"
+      className="fixed inset-0 pointer-events-none select-none overflow-hidden"
       style={{ zIndex: 0 }}
       aria-hidden="true"
     >
-      {/* Map fills the entire viewport */}
+      {/*
+        Perspective wrapper:
+        - rotateX(-20deg) with transform-origin at top means the top edge
+          stays at 100% viewport width while the bottom swings toward the
+          viewer, expanding to ~150% — giving the "looking down at the map"
+          aerial-perspective feel.
+        - 130% width + negative left centres it so corners fill even when
+          the bottom fans out beyond the viewport edges.
+        - 130% height ensures the bottom of the map still covers the
+          viewport after the angular compression.
+      */}
       <div
-        ref={mapContainerRef}
         style={{
-          width: "100%",
-          height: "100%",
-          filter: "sepia(0.15) saturate(0.85) brightness(1.05)",
-          opacity: ready ? 1 : 0,
-          transition: "opacity 1.0s ease",
+          position: "absolute",
+          width: "130%",
+          height: "130%",
+          top: 0,
+          left: "-15%",
+          transformOrigin: "top center",
+          transform: "perspective(700px) rotateX(-20deg)",
         }}
-      />
+      >
+        <div
+          ref={mapContainerRef}
+          style={{
+            width: "100%",
+            height: "100%",
+            /* More vivid: less sepia wash, boosted saturation + contrast */
+            filter: "sepia(0.08) saturate(1.25) contrast(1.25) brightness(1.0)",
+            opacity: ready ? 1 : 0,
+            transition: "opacity 1.0s ease",
+          }}
+        />
+      </div>
 
-      {/* Loading state — sand shimmer */}
+      {/* Loading shimmer */}
       {!ready && (
         <div
           className="absolute inset-0 animate-pulse"
@@ -133,10 +157,10 @@ export default function MapBackground({ location }: MapBackgroundProps) {
         />
       )}
 
-      {/* Light cream overlay so content cards feel grounded — not too heavy */}
+      {/* Thin cream veil — just enough to soften without washing out */}
       <div
         className="absolute inset-0"
-        style={{ background: "hsla(52, 65%, 93%, 0.30)" }}
+        style={{ background: "hsla(52, 65%, 93%, 0.18)" }}
       />
     </div>
   );
