@@ -25,6 +25,11 @@ import AddressAutocomplete from "@/components/address-autocomplete";
 
 type DateMode = "fixed" | "poll";
 
+function parseLocalDate(dateStr: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
 export default function CreateEvent() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -248,7 +253,7 @@ export default function CreateEvent() {
                                   variant="outline"
                                   className={`w-full pl-3 text-left font-normal ${!field.value && "text-muted-foreground"}`}
                                 >
-                                  {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
+                                  {field.value ? format(parseLocalDate(field.value), "PPP") : <span>Pick a date</span>}
                                   <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                 </Button>
                               </FormControl>
@@ -256,7 +261,7 @@ export default function CreateEvent() {
                             <PopoverContent className="w-auto p-0" align="start">
                               <DateCalendar
                                 mode="single"
-                                selected={field.value ? new Date(field.value) : undefined}
+                                selected={field.value ? parseLocalDate(field.value) : undefined}
                                 onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : null)}
                                 disabled={(date) => date < today}
                                 initialFocus
