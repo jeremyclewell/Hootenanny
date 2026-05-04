@@ -4,12 +4,10 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -83,36 +81,42 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
   }, [open]);
 
   const submit = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", `/api/events/${eventId}/rsvps`, {
-        guestName: guest.name,
-        guestEmail: guest.email,
-        response,
-      });
+    mutationFn: async (chosen: RsvpResponse) => {
+      const payload: { guestName: string; response: RsvpResponse; guestEmail?: string } = {
+        guestName: guest.name.trim(),
+        response: chosen,
+      };
+      const trimmedEmail = guest.email.trim();
+      if (trimmedEmail) payload.guestEmail = trimmedEmail;
+      const res = await apiRequest("POST", `/api/events/${eventId}/rsvps`, payload);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_data, chosen) => {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(guest));
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ name: guest.name.trim(), email: guest.email.trim() })
+        );
       } catch {}
       queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/rsvps`] });
+      const label = RESPONSE_OPTIONS.find((o) => o.value === chosen)?.label ?? "RSVP";
       toast({
         title: "RSVP saved!",
-        description: "Thanks for letting the host know.",
+        description: `You're marked as: ${label}.`,
       });
       setOpen(false);
     },
-    onError: () => {
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : "Please try again.";
       toast({
         title: "Could not save RSVP",
-        description: "Please try again.",
+        description: message,
         variant: "destructive",
       });
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const tryPick = (chosen: RsvpResponse) => {
     if (!guest.name.trim()) {
       toast({
         title: "Name required",
@@ -121,15 +125,8 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
       });
       return;
     }
-    if (!response) {
-      toast({
-        title: "Pick a response",
-        description: "Let the host know if you're coming.",
-        variant: "destructive",
-      });
-      return;
-    }
-    submit.mutate();
+    setResponse(chosen);
+    submit.mutate(chosen);
   };
 
   return (
@@ -145,7 +142,7 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
             Let the host know if you're coming. You can update your response anytime.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="rsvp-name">Your name</Label>
             <Input
@@ -174,32 +171,28 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
               {RESPONSE_OPTIONS.map((opt) => {
                 const Icon = opt.icon;
                 const selected = response === opt.value;
+                const isPending = submit.isPending && selected;
                 return (
                   <button
                     key={opt.value}
                     type="button"
                     data-selected={selected}
                     data-testid={`rsvp-option-${opt.value}`}
-                    onClick={() => setResponse(opt.value)}
-                    className={`flex items-center gap-3 rounded-md border p-3 text-left text-sm font-medium transition ${opt.classes}`}
+                    onClick={() => tryPick(opt.value)}
+                    disabled={submit.isPending}
+                    className={`flex items-center gap-3 rounded-md border p-3 text-left text-sm font-medium transition disabled:opacity-60 ${opt.classes}`}
                   >
                     <Icon className="h-4 w-4" />
-                    {opt.label}
+                    {isPending ? "Saving..." : opt.label}
                   </button>
                 );
               })}
             </div>
+            <p className="text-xs text-gray-500">
+              Tap a response to save it instantly. You can change it anytime.
+            </p>
           </div>
-          <DialogFooter>
-            <Button
-              type="submit"
-              disabled={submit.isPending}
-              data-testid="button-submit-rsvp"
-            >
-              {submit.isPending ? "Saving..." : "Save RSVP"}
-            </Button>
-          </DialogFooter>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -12,6 +12,7 @@ import EditItemModal from "@/components/edit-item-modal";
 import PollView from "@/components/poll-view";
 import ReopenPollBanner from "@/components/reopen-poll-banner";
 import RsvpList from "@/components/rsvp-list";
+import RsvpCta from "@/components/rsvp-cta";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle } from "lucide-react";
@@ -141,6 +142,7 @@ export default function Event() {
           <PollView event={event} isHost={isHost} hostToken={hostToken} />
         ) : (
           <>
+            <RsvpCta eventId={event.id} eventTitle={event.title} />
             {isHost && event.pollStatus === "finalized" && (
               <ReopenPollBanner event={event} hostToken={hostToken} />
             )}
