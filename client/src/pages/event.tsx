@@ -50,14 +50,18 @@ export default function Event() {
 
   const isPolling = eventQuery.data?.pollStatus === "polling";
 
+  const isHostView = !!hostToken;
+
+  // Items + stats are needed any time the host wants to manage the menu —
+  // including while a date poll is still open so they can prep ahead.
   const itemsQuery = useQuery<Item[]>({
     queryKey: [`/api/events/${id}/items`],
-    enabled: !!id && !isPolling,
+    enabled: !!id && (!isPolling || isHostView),
   });
 
   const statsQuery = useQuery<EventStats>({
     queryKey: [`/api/events/${id}/stats`],
-    enabled: !!id && !isPolling,
+    enabled: !!id && (!isPolling || isHostView),
   });
 
   const rsvpsQuery = useQuery<PublicRsvp[]>({
@@ -143,7 +147,7 @@ export default function Event() {
     going: rsvps.filter((r) => r.response === "yes").length,
     maybe: rsvps.filter((r) => r.response === "maybe").length,
   };
-  const isHost = !!hostToken;
+  const isHost = isHostView;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -151,7 +155,24 @@ export default function Event() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {isPolling ? (
-          <PollView event={event} isHost={isHost} hostToken={hostToken} />
+          <div className="space-y-8">
+            <PollView event={event} isHost={isHost} hostToken={hostToken} />
+            {isHost && (
+              <section className="space-y-4">
+                <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                  <h3 className="text-base font-semibold text-gray-900">
+                    Set up your menu while you wait
+                  </h3>
+                  <p className="text-sm text-gray-700">
+                    Add, edit, or remove food and drink items now — guests will
+                    be able to claim them as soon as you lock in a date.
+                  </p>
+                </div>
+                <AddCustomItem eventId={event.id} />
+                <ItemCategories items={items} eventId={event.id} />
+              </section>
+            )}
+          </div>
         ) : (
           <>
             <RsvpCta eventId={event.id} eventTitle={event.title} />

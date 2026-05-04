@@ -198,7 +198,7 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
             </p>
             <p className="text-sm text-gray-700">
               {isHost
-                ? "Share the link with your guests so they can mark which dates work for them. You can add more candidate dates anytime, then pick the winning date when you're ready."
+                ? "Share the link with your guests so they can mark which dates work for them. You can also set up the food and drink list below while you wait — it'll be ready for guests as soon as you lock in a date."
                 : "The host hasn't locked in a date yet. Mark the dates that work for you below — and check back, the host might add more options."}
             </p>
           </div>

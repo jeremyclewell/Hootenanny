@@ -54,20 +54,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const eventData = insertEventSchema.parse(req.body);
       const event = await storage.createEvent(eventData);
 
-      // Only seed theme items when this is a fixed-date event.
-      // Polling events seed items after the host finalizes a date.
-      if (event.pollStatus !== "polling") {
-        const themeItems = getThemeItems(eventData.theme);
-        for (const item of themeItems) {
-          await storage.addItem({
-            eventId: event.id,
-            name: item.name,
-            category: item.category,
-            isCustom: false,
-            claimedBy: null,
-            claimedByEmail: null,
-          });
-        }
+      // Seed theme items at creation so the host can prep the menu
+      // (add / edit / remove items) even while a date poll is open.
+      const themeItems = getThemeItems(eventData.theme);
+      for (const item of themeItems) {
+        await storage.addItem({
+          eventId: event.id,
+          name: item.name,
+          category: item.category,
+          isCustom: false,
+          claimedBy: null,
+          claimedByEmail: null,
+        });
       }
 
       // Return the full event including the host token so the creator's
