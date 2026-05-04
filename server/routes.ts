@@ -111,11 +111,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get poll votes for an event
+  // Get poll votes for an event (voter emails are stripped — they are
+  // private to the host and never displayed in the UI)
   app.get("/api/events/:id/votes", async (req, res) => {
     try {
       const votes = await storage.getEventVotes(req.params.id);
-      res.json(votes);
+      const publicVotes = votes.map(({ voterEmail: _voterEmail, ...rest }) => rest);
+      res.json(publicVotes);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch votes" });
     }
