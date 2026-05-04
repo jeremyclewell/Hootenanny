@@ -4,6 +4,7 @@ import { useWebSocket } from "@/lib/websocket";
 import { queryClient } from "@/lib/queryClient";
 import { useEffect, useState } from "react";
 import EventHeader from "@/components/event-header";
+import MapBanner from "@/components/map-banner";
 import QuickStats from "@/components/quick-stats";
 import AddCustomItem from "@/components/add-custom-item";
 import ItemCategories from "@/components/item-categories";
@@ -27,11 +28,10 @@ interface EventStats {
   custom: number;
 }
 
-export default function Event() {
+export default function EventPage() {
   const { id } = useParams();
   const { lastMessage } = useWebSocket(id || null);
 
-  // Read the host token (if any) for this event from localStorage
   const [hostToken, setHostToken] = useState<string | null>(null);
   useEffect(() => {
     if (!id) return;
@@ -42,18 +42,14 @@ export default function Event() {
     }
   }, [id]);
 
-  // Queries
   const eventQuery = useQuery<Event>({
     queryKey: [`/api/events/${id}`],
     enabled: !!id,
   });
 
   const isPolling = eventQuery.data?.pollStatus === "polling";
-
   const isHostView = !!hostToken;
 
-  // Items + stats are needed any time the host wants to manage the menu —
-  // including while a date poll is still open so they can prep ahead.
   const itemsQuery = useQuery<Item[]>({
     queryKey: [`/api/events/${id}/items`],
     enabled: !!id && (!isPolling || isHostView),
@@ -69,10 +65,8 @@ export default function Event() {
     enabled: !!id && !isPolling,
   });
 
-  // Handle WebSocket updates
   useEffect(() => {
     if (!lastMessage || !id) return;
-
     if (
       lastMessage.type === "itemClaimed" ||
       lastMessage.type === "itemAdded" ||
@@ -83,22 +77,18 @@ export default function Event() {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/items`] });
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/stats`] });
     }
-
     if (lastMessage.type === "voteSubmitted") {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/votes`] });
     }
-
     if (lastMessage.type === "rsvpSubmitted" || lastMessage.type === "rsvpDeleted") {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/rsvps`] });
     }
-
     if (lastMessage.type === "dateFinalized" || lastMessage.type === "pollReopened") {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/items`] });
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/stats`] });
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/votes`] });
     }
-
     if (lastMessage.type === "candidateDatesUpdated") {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}`] });
     }
@@ -106,16 +96,16 @@ export default function Event() {
 
   if (eventQuery.isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="bg-white shadow-sm border-b border-gray-200 h-16" />
+      <div className="min-h-screen bg-background">
+        <div className="bg-card border-b border-border h-16 shadow-warm" />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Skeleton className="h-32 w-full mb-8" />
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-20" />
+          <Skeleton className="h-32 w-full mb-8 rounded-2xl" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 rounded-xl" />
             ))}
           </div>
-          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-48 w-full rounded-2xl" />
         </main>
       </div>
     );
@@ -123,14 +113,14 @@ export default function Event() {
 
   if (eventQuery.error || !eventQuery.data) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
-        <Card className="w-full max-w-md mx-4">
+      <div className="min-h-screen w-full flex items-center justify-center bg-background">
+        <Card className="w-full max-w-md mx-4 shadow-warm border-border">
           <CardContent className="pt-6">
-            <div className="flex mb-4 gap-2">
-              <AlertCircle className="h-8 w-8 text-red-500" />
-              <h1 className="text-2xl font-bold text-gray-900">Event Not Found</h1>
+            <div className="flex mb-4 gap-3">
+              <AlertCircle className="h-8 w-8 text-destructive shrink-0" />
+              <h1 className="text-2xl font-serif font-bold text-foreground">Event Not Found</h1>
             </div>
-            <p className="mt-4 text-sm text-gray-600">
+            <p className="mt-2 text-sm text-muted-foreground">
               The hootenanny event you're looking for doesn't exist or has been removed.
             </p>
           </CardContent>
@@ -150,22 +140,25 @@ export default function Event() {
   const isHost = isHostView;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
+      {/* Map banner sits at the top — the sticky nav scrolls over it */}
+      {event.location && <MapBanner location={event.location} />}
+
       <EventHeader event={event} />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         {isPolling ? (
           <div className="space-y-8">
             <PollView event={event} isHost={isHost} hostToken={hostToken} />
             {isHost && (
               <section className="space-y-4">
-                <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
-                  <h3 className="text-base font-semibold text-gray-900">
+                <div className="rounded-2xl border border-teal-100 bg-teal-50 p-5">
+                  <h3 className="font-serif font-semibold text-foreground mb-1">
                     Set up your menu while you wait
                   </h3>
-                  <p className="text-sm text-gray-700">
-                    Add, edit, or remove food and drink items now — guests will
-                    be able to claim them as soon as you lock in a date.
+                  <p className="text-sm text-muted-foreground">
+                    Add, edit, or remove food and drink items now — guests will be able to claim
+                    them as soon as you lock in a date.
                   </p>
                 </div>
                 <AddCustomItem eventId={event.id} />
