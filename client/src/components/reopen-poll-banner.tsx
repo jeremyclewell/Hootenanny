@@ -64,13 +64,13 @@ export default function ReopenPollBanner({ event, hostToken }: ReopenPollBannerP
   });
 
   return (
-    <Card className="mb-6 border-amber-300 bg-amber-50">
+    <Card className="mb-6 border-sand-200 bg-sand-100">
       <CardContent className="flex flex-wrap items-start justify-between gap-3 pt-6">
         <div className="flex items-start gap-3">
-          <CalendarRange className="mt-1 h-5 w-5 text-amber-700" />
+          <CalendarRange className="mt-1 h-5 w-5 text-sand-600" />
           <div>
-            <p className="font-semibold text-gray-900">Plans changed?</p>
-            <p className="text-sm text-gray-700">
+            <p className="font-serif font-semibold text-foreground">Plans changed?</p>
+            <p className="text-sm text-muted-foreground">
               You can reopen polling on this event. Guests' previous votes and the items
               everyone has signed up for will be preserved.
             </p>

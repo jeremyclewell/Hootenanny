@@ -23,10 +23,7 @@ interface PollViewProps {
 
 const STORAGE_KEY = "hootenanny-voter";
 
-interface StoredVoter {
-  name: string;
-  email: string;
-}
+interface StoredVoter { name: string; email: string; }
 
 function loadStoredVoter(): StoredVoter {
   try {
@@ -52,13 +49,9 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
   const fourWeeksOut = new Date(today);
   fourWeeksOut.setDate(fourWeeksOut.getDate() + 28);
 
-  const votesQuery = useQuery<DateVote[]>({
-    queryKey: [`/api/events/${event.id}/votes`],
-  });
-
+  const votesQuery = useQuery<DateVote[]>({ queryKey: [`/api/events/${event.id}/votes`] });
   const votes = votesQuery.data || [];
 
-  // Pre-fill selection from existing vote that matches the saved voter identity
   useEffect(() => {
     if (hydrated || votesQuery.isLoading) return;
     const match = votes.find(
@@ -67,9 +60,7 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
         (v.voterEmail || "").trim().toLowerCase() === voter.email.trim().toLowerCase() &&
         voter.name.trim().length > 0
     );
-    if (match) {
-      setSelected(new Set(match.selectedDates));
-    }
+    if (match) setSelected(new Set(match.selectedDates));
     setHydrated(true);
   }, [votesQuery.isLoading, votes, voter, hydrated]);
 
@@ -83,48 +74,25 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
       return res.json();
     },
     onSuccess: () => {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(voter));
-      } catch {}
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(voter)); } catch {}
       queryClient.invalidateQueries({ queryKey: [`/api/events/${event.id}/votes`] });
-      toast({
-        title: "Thanks!",
-        description: "Your availability has been saved.",
-      });
+      toast({ title: "Thanks!", description: "Your availability has been saved." });
     },
-    onError: () => {
-      toast({
-        title: "Could not save",
-        description: "Please try again.",
-        variant: "destructive",
-      });
-    },
+    onError: () => toast({ title: "Could not save", description: "Please try again.", variant: "destructive" }),
   });
 
   const addDatesMutation = useMutation({
     mutationFn: async (dates: string[]) => {
-      const res = await apiRequest("POST", `/api/events/${event.id}/candidate-dates`, {
-        hostToken,
-        dates,
-      });
+      const res = await apiRequest("POST", `/api/events/${event.id}/candidate-dates`, { hostToken, dates });
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${event.id}`] });
       setExtraDates([]);
       setAddOpen(false);
-      toast({
-        title: "Dates added",
-        description: "Guests can now vote on the new dates too.",
-      });
+      toast({ title: "Dates added", description: "Guests can now vote on the new dates too." });
     },
-    onError: () => {
-      toast({
-        title: "Could not add dates",
-        description: "Please try again.",
-        variant: "destructive",
-      });
-    },
+    onError: () => toast({ title: "Could not add dates", description: "Please try again.", variant: "destructive" }),
   });
 
   const finalizeMutation = useMutation({
@@ -141,22 +109,14 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${event.id}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/events/${event.id}/items`] });
       queryClient.invalidateQueries({ queryKey: [`/api/events/${event.id}/stats`] });
-      toast({
-        title: "Date locked in!",
-        description: "Guests can now sign up for items.",
-      });
+      toast({ title: "Date locked in!", description: "Guests can now sign up for items." });
     },
     onError: (err: unknown) => {
       const message = err instanceof Error ? err.message : "Please try again.";
-      toast({
-        title: "Could not finalize",
-        description: message,
-        variant: "destructive",
-      });
+      toast({ title: "Could not finalize", description: message, variant: "destructive" });
     },
   });
 
-  // Tally votes per candidate date
   const tally = candidateDates.map((d) => {
     const voters = votes.filter((v) => v.selectedDates.includes(d));
     return { date: d, count: voters.length, voters };
@@ -176,11 +136,7 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!voter.name.trim()) {
-      toast({
-        title: "Name required",
-        description: "Please enter your name first.",
-        variant: "destructive",
-      });
+      toast({ title: "Name required", description: "Please enter your name first.", variant: "destructive" });
       return;
     }
     submitVote.mutate();
@@ -189,29 +145,25 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
   return (
     <div className="space-y-6">
       {/* Status banner */}
-      <Card className="border-primary/30 bg-primary/5">
-        <CardContent className="flex items-start gap-3 pt-6">
-          <CalendarCheck className="mt-1 h-5 w-5 text-primary" />
-          <div>
-            <p className="font-semibold text-gray-900">
-              Polling is open — picking a date together
-            </p>
-            <p className="text-sm text-gray-700">
-              {isHost
-                ? "Share the link with your guests so they can mark which dates work for them. You can also set up the food and drink list below while you wait — it'll be ready for guests as soon as you lock in a date."
-                : "The host hasn't locked in a date yet. Mark the dates that work for you below — and check back, the host might add more options."}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-start gap-3 rounded-2xl border border-teal-100 bg-teal-50 p-5 shadow-warm">
+        <CalendarCheck className="mt-0.5 h-5 w-5 shrink-0 text-teal-500" />
+        <div>
+          <p className="font-serif font-semibold text-foreground">Picking a date together</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {isHost
+              ? "Share the link so guests can mark which dates work. You can also set up the food list below — it'll be ready once you lock in a date."
+              : "The host hasn't locked in a date yet. Check every date that works for you below."}
+          </p>
+        </div>
+      </div>
 
       {/* Voter form */}
       {!isHost && (
-        <Card>
+        <Card className="shadow-warm border-border">
           <CardHeader>
-            <CardTitle>Mark your availability</CardTitle>
+            <CardTitle className="font-serif">Mark your availability</CardTitle>
             <CardDescription>
-              Tap every date that could work for you. You can come back and update this anytime.
+              Tap every date that could work for you. You can come back and update anytime.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -246,8 +198,10 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
                     <label
                       key={d}
                       htmlFor={`date-${d}`}
-                      className={`flex cursor-pointer items-center gap-3 rounded-md border p-3 transition ${
-                        isSelected ? "border-primary bg-primary/5" : "border-gray-200 bg-white hover:bg-gray-50"
+                      className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-all ${
+                        isSelected
+                          ? "border-primary bg-terracotta-50 ring-1 ring-primary"
+                          : "border-border bg-card hover:border-sand-400"
                       }`}
                     >
                       <Checkbox
@@ -256,19 +210,17 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
                         onCheckedChange={() => toggle(d)}
                       />
                       <div>
-                        <p className="font-medium text-gray-900">
-                          {format(parseISO(d), "EEEE, MMM d")}
-                        </p>
-                        <p className="text-xs text-gray-500">{format(parseISO(d), "yyyy")}</p>
+                        <p className="font-medium text-foreground">{format(parseISO(d), "EEEE, MMM d")}</p>
+                        <p className="text-xs text-muted-foreground">{format(parseISO(d), "yyyy")}</p>
                       </div>
                     </label>
                   );
                 })}
               </div>
 
-              <Button type="submit" className="w-full" disabled={submitVote.isPending}>
+              <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={submitVote.isPending}>
                 <CheckCircle2 className="mr-2 h-4 w-4" />
-                {submitVote.isPending ? "Saving..." : "Save my availability"}
+                {submitVote.isPending ? "Saving…" : "Save my availability"}
               </Button>
             </form>
           </CardContent>
@@ -276,12 +228,12 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
       )}
 
       {/* Tally / host panel */}
-      <Card>
+      <Card className="shadow-warm border-border">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                {isHost && <Crown className="h-5 w-5 text-amber-500" />}
+              <CardTitle className="flex items-center gap-2 font-serif">
+                {isHost && <Crown className="h-5 w-5 text-sand-400" />}
                 Results so far
               </CardTitle>
               <CardDescription className="flex items-center gap-1.5">
@@ -292,8 +244,9 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
+          {/* Host-only controls */}
           {isHost && (
-            <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+            <div className="space-y-3 rounded-xl border border-sand-200 bg-sand-100 p-4">
               <div className="flex flex-wrap items-end gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="finalize-time" className="flex items-center gap-2 text-sm">
@@ -322,18 +275,16 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
                     </SelectTrigger>
                     <SelectContent>
                       {DURATION_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={String(opt.value)}>
-                          {opt.label}
-                        </SelectItem>
+                        <SelectItem key={opt.value} value={String(opt.value)}>{opt.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                <p className="text-xs text-gray-600">
-                  Pick a start time and duration before locking in the date. Time can be left blank.
+                <p className="text-xs text-muted-foreground">
+                  Set a time and duration before locking in the date (time can be left blank).
                 </p>
               </div>
-              <div className="flex flex-wrap items-center gap-3 border-t border-gray-200 pt-3">
+              <div className="flex flex-wrap items-center gap-3 border-t border-sand-200 pt-3">
                 <Popover open={addOpen} onOpenChange={setAddOpen}>
                   <PopoverTrigger asChild>
                     <Button size="sm" variant="outline" data-testid="button-add-candidate-dates">
@@ -342,8 +293,8 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-3" align="start">
-                    <p className="mb-2 text-xs text-gray-600">
-                      Pick any extra days you'd like to offer guests.
+                    <p className="mb-2 text-xs text-muted-foreground">
+                      Pick extra days you'd like to offer guests.
                     </p>
                     <DateCalendar
                       mode="multiple"
@@ -351,26 +302,19 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
                       onSelect={(days) => setExtraDates(days || [])}
                       disabled={(date) => {
                         if (date < today) return true;
-                        const iso = format(date, "yyyy-MM-dd");
-                        return candidateDates.includes(iso);
+                        return candidateDates.includes(format(date, "yyyy-MM-dd"));
                       }}
                       fromDate={today}
                       toDate={fourWeeksOut}
                       numberOfMonths={1}
                     />
                     <div className="mt-3 flex justify-end gap-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setExtraDates([]);
-                          setAddOpen(false);
-                        }}
-                      >
+                      <Button size="sm" variant="ghost" onClick={() => { setExtraDates([]); setAddOpen(false); }}>
                         Cancel
                       </Button>
                       <Button
                         size="sm"
+                        className="bg-primary hover:bg-primary/90"
                         disabled={extraDates.length === 0 || addDatesMutation.isPending}
                         onClick={() => {
                           const iso = extraDates
@@ -381,40 +325,42 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
                         }}
                       >
                         <Plus className="mr-1 h-4 w-4" />
-                        {addDatesMutation.isPending ? "Adding..." : `Add ${extraDates.length || ""}`.trim()}
+                        {addDatesMutation.isPending ? "Adding…" : `Add ${extraDates.length || ""}`.trim()}
                       </Button>
                     </div>
                   </PopoverContent>
                 </Popover>
-                <p className="text-xs text-gray-600">
-                  Existing votes are preserved when you add new dates.
-                </p>
+                <p className="text-xs text-muted-foreground">Existing votes are preserved.</p>
               </div>
             </div>
           )}
+
           {tally.length === 0 && (
-            <p className="text-sm text-gray-500">No candidate dates set.</p>
+            <p className="text-sm text-muted-foreground">No candidate dates set.</p>
           )}
+
           {tally.map((row) => {
             const isLeader = row.count > 0 && row.count === maxCount;
             const pct = totalVoters > 0 ? Math.round((row.count / totalVoters) * 100) : 0;
             return (
               <div
                 key={row.date}
-                className={`rounded-lg border p-4 ${
-                  isLeader ? "border-amber-300 bg-amber-50" : "border-gray-200 bg-white"
+                className={`rounded-xl border p-4 transition-all ${
+                  isLeader
+                    ? "border-sand-200 bg-sand-100"
+                    : "border-border bg-card"
                 }`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    {isLeader && <Trophy className="h-4 w-4 text-amber-500" />}
+                    {isLeader && <Trophy className="h-4 w-4 text-sand-400" />}
                     <div>
-                      <p className="font-semibold text-gray-900">
+                      <p className="font-semibold text-foreground">
                         {format(parseISO(row.date), "EEEE, MMM d, yyyy")}
                       </p>
-                      <p className="text-xs text-gray-600">
+                      <p className="text-xs text-muted-foreground">
                         {row.count} {row.count === 1 ? "vote" : "votes"}
-                        {totalVoters > 0 && ` • ${pct}%`}
+                        {totalVoters > 0 && ` · ${pct}%`}
                       </p>
                     </div>
                   </div>
@@ -423,6 +369,7 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
                       size="sm"
                       onClick={() => finalizeMutation.mutate(row.date)}
                       disabled={finalizeMutation.isPending}
+                      className={isLeader ? "bg-primary hover:bg-primary/90" : ""}
                       variant={isLeader ? "default" : "outline"}
                     >
                       Finalize this date
@@ -430,9 +377,9 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
                   )}
                 </div>
                 {totalVoters > 0 && (
-                  <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-gray-100">
+                  <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
                     <div
-                      className={`h-full ${isLeader ? "bg-amber-400" : "bg-primary/60"}`}
+                      className={`h-full rounded-full transition-all ${isLeader ? "bg-sand-400" : "bg-teal-400"}`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>
@@ -442,7 +389,7 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
                     {row.voters.map((v) => (
                       <span
                         key={v.id}
-                        className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700"
+                        className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-foreground"
                       >
                         {v.voterName}
                       </span>

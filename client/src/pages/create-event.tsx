@@ -17,7 +17,7 @@ import { insertEventSchema, type InsertEvent } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { themes } from "@/lib/theme-items";
-import { ArrowLeft, Calendar as CalendarIcon, MapPin, Users, Clock, PartyPopper, CalendarRange, Hourglass } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, MapPin, Users, Clock, PartyPopper, CalendarRange, Hourglass, Utensils } from "lucide-react";
 import { DURATION_OPTIONS } from "@/lib/duration";
 import { format } from "date-fns";
 import { Link } from "wouter";
@@ -50,11 +50,8 @@ export default function CreateEvent() {
       return response.json();
     },
     onSuccess: (event) => {
-      // Persist the host token so this browser can finalize the date later
       if (event?.hostToken) {
-        try {
-          localStorage.setItem(`hootenanny-host-${event.id}`, event.hostToken);
-        } catch {}
+        try { localStorage.setItem(`hootenanny-host-${event.id}`, event.hostToken); } catch {}
       }
       toast({
         title: "Event Created!",
@@ -66,11 +63,7 @@ export default function CreateEvent() {
       setLocation(`/event/${event.id}`);
     },
     onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to create event. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to create event. Please try again.", variant: "destructive" });
     },
   });
 
@@ -93,11 +86,7 @@ export default function CreateEvent() {
         candidateDates: sorted.map((d) => format(d, "yyyy-MM-dd")),
       });
     } else {
-      createEventMutation.mutate({
-        ...data,
-        pollStatus: "none",
-        candidateDates: null,
-      });
+      createEventMutation.mutate({ ...data, pollStatus: "none", candidateDates: null });
     }
   };
 
@@ -106,11 +95,17 @@ export default function CreateEvent() {
   fourWeeksOut.setDate(fourWeeksOut.getDate() + 28);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
+      <header className="bg-card border-b border-border shadow-warm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-sm">
+                <Utensils className="text-white h-4 w-4" />
+              </div>
+              <span className="text-lg font-serif font-semibold text-foreground">Hootenanny</span>
+            </div>
             <Link href="/">
               <Button variant="ghost" size="sm">
                 <ArrowLeft className="mr-2 h-4 w-4" />
@@ -122,15 +117,14 @@ export default function CreateEvent() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl">Create New Hootenanny Event</CardTitle>
-            <CardDescription>
-              Set up your hootenanny event with themed items and share with guests
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="mb-8">
+          <h1 className="text-3xl font-serif font-bold text-foreground mb-1">Create a New Event</h1>
+          <p className="text-muted-foreground">Set up your hootenanny with a theme and share with guests.</p>
+        </div>
+
+        <Card className="shadow-warm border-border">
+          <CardContent className="pt-6">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <FormField
@@ -140,7 +134,7 @@ export default function CreateEvent() {
                     <FormItem>
                       <FormLabel>Event Title</FormLabel>
                       <FormControl>
-                        <Input placeholder="Summer Pool Party 2024" {...field} />
+                        <Input placeholder="Summer Pool Party 2025" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -177,10 +171,10 @@ export default function CreateEvent() {
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description (Optional)</FormLabel>
+                      <FormLabel>Description <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Join us for a fun-filled pool party! Bring your appetite and let's make this a memorable summer gathering."
+                          placeholder="Join us for a fun-filled summer gathering!"
                           {...field}
                           value={field.value || ""}
                         />
@@ -191,8 +185,8 @@ export default function CreateEvent() {
                 />
 
                 {/* Date mode selector */}
-                <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
-                  <Label className="text-sm font-semibold text-gray-900">When is it?</Label>
+                <div className="space-y-3 rounded-xl border border-border bg-muted/40 p-4">
+                  <Label className="text-sm font-semibold text-foreground">When is it?</Label>
                   <RadioGroup
                     value={dateMode}
                     onValueChange={(v) => setDateMode(v as DateMode)}
@@ -200,36 +194,36 @@ export default function CreateEvent() {
                   >
                     <label
                       htmlFor="mode-fixed"
-                      className={`flex cursor-pointer items-start gap-3 rounded-md border bg-white p-3 transition ${
-                        dateMode === "fixed" ? "border-primary ring-1 ring-primary" : "border-gray-200"
+                      className={`flex cursor-pointer items-start gap-3 rounded-xl border bg-card p-3 transition-all ${
+                        dateMode === "fixed"
+                          ? "border-primary ring-1 ring-primary bg-terracotta-50"
+                          : "border-border hover:border-sand-400"
                       }`}
                     >
                       <RadioGroupItem id="mode-fixed" value="fixed" className="mt-1" />
                       <div>
-                        <div className="flex items-center gap-2 font-medium">
+                        <div className="flex items-center gap-2 font-medium text-sm">
                           <CalendarIcon className="h-4 w-4" />
                           Set a date
                         </div>
-                        <p className="mt-1 text-xs text-gray-600">
-                          You already know the date.
-                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">You already know when.</p>
                       </div>
                     </label>
                     <label
                       htmlFor="mode-poll"
-                      className={`flex cursor-pointer items-start gap-3 rounded-md border bg-white p-3 transition ${
-                        dateMode === "poll" ? "border-primary ring-1 ring-primary" : "border-gray-200"
+                      className={`flex cursor-pointer items-start gap-3 rounded-xl border bg-card p-3 transition-all ${
+                        dateMode === "poll"
+                          ? "border-primary ring-1 ring-primary bg-terracotta-50"
+                          : "border-border hover:border-sand-400"
                       }`}
                     >
                       <RadioGroupItem id="mode-poll" value="poll" className="mt-1" />
                       <div>
-                        <div className="flex items-center gap-2 font-medium">
+                        <div className="flex items-center gap-2 font-medium text-sm">
                           <CalendarRange className="h-4 w-4" />
                           Let guests pick
                         </div>
-                        <p className="mt-1 text-xs text-gray-600">
-                          Offer a few dates and finalize later.
-                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">Offer dates and finalize later.</p>
                       </div>
                     </label>
                   </RadioGroup>
@@ -244,7 +238,7 @@ export default function CreateEvent() {
                         <FormItem className="flex flex-col">
                           <FormLabel className="flex items-center gap-2">
                             <CalendarIcon className="h-4 w-4" />
-                            Event Date (Optional)
+                            Date <span className="text-muted-foreground font-normal">(optional)</span>
                           </FormLabel>
                           <Popover>
                             <PopoverTrigger asChild>
@@ -253,11 +247,7 @@ export default function CreateEvent() {
                                   variant="outline"
                                   className={`w-full pl-3 text-left font-normal ${!field.value && "text-muted-foreground"}`}
                                 >
-                                  {field.value ? (
-                                    format(new Date(field.value), "PPP")
-                                  ) : (
-                                    <span>Pick a date</span>
-                                  )}
+                                  {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
                                   <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                 </Button>
                               </FormControl>
@@ -284,12 +274,11 @@ export default function CreateEvent() {
                         <FormItem>
                           <FormLabel className="flex items-center gap-2">
                             <Clock className="h-4 w-4" />
-                            Event Time (Optional)
+                            Time <span className="text-muted-foreground font-normal">(optional)</span>
                           </FormLabel>
                           <FormControl>
                             <Input
                               type="time"
-                              placeholder="Select time"
                               className="w-full"
                               {...field}
                               value={field.value || ""}
@@ -308,7 +297,7 @@ export default function CreateEvent() {
                         <FormItem>
                           <FormLabel className="flex items-center gap-2">
                             <Users className="h-4 w-4" />
-                            Expected Guests (Optional)
+                            Guests <span className="text-muted-foreground font-normal">(optional)</span>
                           </FormLabel>
                           <FormControl>
                             <Input
@@ -344,9 +333,7 @@ export default function CreateEvent() {
                             </FormControl>
                             <SelectContent>
                               {DURATION_OPTIONS.map((opt) => (
-                                <SelectItem key={opt.value} value={String(opt.value)}>
-                                  {opt.label}
-                                </SelectItem>
+                                <SelectItem key={opt.value} value={String(opt.value)}>{opt.label}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -357,17 +344,15 @@ export default function CreateEvent() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <div className="rounded-lg border border-gray-200 bg-white p-4">
+                    <div className="rounded-xl border border-border bg-card p-4">
                       <div className="mb-3 flex items-center justify-between">
                         <Label className="flex items-center gap-2 text-sm font-medium">
                           <CalendarRange className="h-4 w-4" />
                           Candidate Dates
                         </Label>
-                        <span className="text-xs text-gray-500">
-                          {candidateDates.length} selected
-                        </span>
+                        <span className="text-xs text-muted-foreground">{candidateDates.length} selected</span>
                       </div>
-                      <p className="mb-3 text-xs text-gray-600">
+                      <p className="mb-3 text-xs text-muted-foreground">
                         Tap the days that could work. Guests will pick which of these work for them.
                       </p>
                       <div className="flex justify-center">
@@ -388,7 +373,7 @@ export default function CreateEvent() {
                             .map((d) => (
                               <span
                                 key={d.toISOString()}
-                                className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary"
+                                className="rounded-full bg-terracotta-100 px-2.5 py-0.5 text-xs text-primary font-medium"
                               >
                                 {format(d, "EEE, MMM d")}
                               </span>
@@ -404,7 +389,7 @@ export default function CreateEvent() {
                         <FormItem>
                           <FormLabel className="flex items-center gap-2">
                             <Users className="h-4 w-4" />
-                            Expected Guests (Optional)
+                            Expected Guests <span className="text-muted-foreground font-normal">(optional)</span>
                           </FormLabel>
                           <FormControl>
                             <Input
@@ -429,7 +414,7 @@ export default function CreateEvent() {
                     <FormItem>
                       <FormLabel className="flex items-center gap-2">
                         <MapPin className="h-4 w-4" />
-                        Location (Optional)
+                        Location <span className="text-muted-foreground font-normal">(optional)</span>
                       </FormLabel>
                       <FormControl>
                         <Input placeholder="123 Summer Lane, Poolside" {...field} value={field.value || ""} />
@@ -441,11 +426,11 @@ export default function CreateEvent() {
 
                 <Button
                   type="submit"
-                  className="w-full bg-primary hover:bg-primary/90"
+                  className="w-full bg-primary hover:bg-primary/90 text-base py-5"
                   disabled={createEventMutation.isPending}
                 >
-                  <PartyPopper className="mr-2 h-4 w-4" />
-                  {createEventMutation.isPending ? "Creating..." : "Create Hootenanny"}
+                  <PartyPopper className="mr-2 h-5 w-5" />
+                  {createEventMutation.isPending ? "Creating…" : "Create Hootenanny"}
                 </Button>
               </form>
             </Form>

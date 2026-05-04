@@ -22,13 +22,8 @@ interface RsvpDialogProps {
 }
 
 const STORAGE_KEY = "hootenanny-voter";
-
 type PublicRsvp = Omit<Rsvp, "guestEmail">;
-
-interface StoredGuest {
-  name: string;
-  email: string;
-}
+interface StoredGuest { name: string; email: string; }
 
 function loadStoredGuest(): StoredGuest {
   try {
@@ -45,28 +40,29 @@ const RESPONSE_OPTIONS: Array<{
   value: RsvpResponse;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  classes: string;
+  base: string;
+  selected: string;
 }> = [
   {
     value: "yes",
     label: "Yes, I'll be there",
     icon: Check,
-    classes:
-      "border-green-300 bg-green-50 text-green-800 hover:bg-green-100 data-[selected=true]:bg-green-600 data-[selected=true]:text-white data-[selected=true]:border-green-600",
+    base: "border-sage-100 bg-sage-50 text-sage-700 hover:bg-sage-100",
+    selected: "border-sage-400 bg-sage-400 text-white",
   },
   {
     value: "maybe",
     label: "Maybe",
     icon: HelpCircle,
-    classes:
-      "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 data-[selected=true]:bg-amber-500 data-[selected=true]:text-white data-[selected=true]:border-amber-500",
+    base: "border-sand-200 bg-sand-100 text-sand-600 hover:bg-sand-200",
+    selected: "border-sand-400 bg-sand-400 text-white",
   },
   {
     value: "no",
     label: "Can't make it",
     icon: X,
-    classes:
-      "border-red-300 bg-red-50 text-red-800 hover:bg-red-100 data-[selected=true]:bg-red-600 data-[selected=true]:text-white data-[selected=true]:border-red-600",
+    base: "border-terracotta-100 bg-terracotta-50 text-primary hover:bg-terracotta-100",
+    selected: "border-primary bg-primary text-white",
   },
 ];
 
@@ -88,11 +84,6 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
     enabled: open,
   });
 
-  // The public RSVP list omits emails, so we can only match by name.
-  // To avoid offering "Remove my RSVP" against the wrong entry when two
-  // guests share a name, only surface removal when the name match is
-  // unambiguous (exactly one RSVP). The server still re-validates the
-  // owner using name + email before deleting.
   const myRsvp = useMemo(() => {
     const name = guest.name.trim().toLowerCase();
     if (!name) return undefined;
@@ -115,69 +106,42 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
     },
     onSuccess: (_data, chosen) => {
       try {
-        localStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify({ name: guest.name.trim(), email: guest.email.trim() })
-        );
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ name: guest.name.trim(), email: guest.email.trim() }));
       } catch {}
       queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/rsvps`] });
       const label = RESPONSE_OPTIONS.find((o) => o.value === chosen)?.label ?? "RSVP";
-      toast({
-        title: "RSVP saved!",
-        description: `You're marked as: ${label}.`,
-      });
+      toast({ title: "RSVP saved!", description: `You're marked as: ${label}.` });
       setOpen(false);
     },
     onError: (err: unknown) => {
       const message = err instanceof Error ? err.message : "Please try again.";
-      toast({
-        title: "Could not save RSVP",
-        description: message,
-        variant: "destructive",
-      });
+      toast({ title: "Could not save RSVP", description: message, variant: "destructive" });
     },
   });
 
   const remove = useMutation({
     mutationFn: async () => {
       if (!myRsvp) throw new Error("No RSVP to remove");
-      const payload: { guestName: string; guestEmail?: string } = {
-        guestName: guest.name.trim(),
-      };
+      const payload: { guestName: string; guestEmail?: string } = { guestName: guest.name.trim() };
       const trimmedEmail = guest.email.trim();
       if (trimmedEmail) payload.guestEmail = trimmedEmail;
-      const res = await apiRequest(
-        "DELETE",
-        `/api/events/${eventId}/rsvps/${myRsvp.id}`,
-        payload
-      );
+      const res = await apiRequest("DELETE", `/api/events/${eventId}/rsvps/${myRsvp.id}`, payload);
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/rsvps`] });
-      toast({
-        title: "RSVP removed",
-        description: "You're no longer on the attendee list.",
-      });
+      toast({ title: "RSVP removed", description: "You're no longer on the attendee list." });
       setOpen(false);
     },
     onError: (err: unknown) => {
       const message = err instanceof Error ? err.message : "Please try again.";
-      toast({
-        title: "Could not remove RSVP",
-        description: message,
-        variant: "destructive",
-      });
+      toast({ title: "Could not remove RSVP", description: message, variant: "destructive" });
     },
   });
 
   const tryPick = (chosen: RsvpResponse) => {
     if (!guest.name.trim()) {
-      toast({
-        title: "Name required",
-        description: "Please enter your name first.",
-        variant: "destructive",
-      });
+      toast({ title: "Name required", description: "Please enter your name first.", variant: "destructive" });
       return;
     }
     setResponse(chosen);
@@ -191,7 +155,7 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 font-serif">
             <MailCheck className="h-5 w-5 text-primary" />
             RSVP to this hootenanny
           </DialogTitle>
@@ -200,71 +164,75 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="rsvp-name">Your name</Label>
-            <Input
-              id="rsvp-name"
-              value={guest.name}
-              onChange={(e) => setGuest({ ...guest, name: e.target.value })}
-              placeholder="Alex Smith"
-              required
-              data-testid="input-rsvp-name"
-            />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="rsvp-name">Your name</Label>
+              <Input
+                id="rsvp-name"
+                value={guest.name}
+                onChange={(e) => setGuest({ ...guest, name: e.target.value })}
+                placeholder="Alex Smith"
+                required
+                data-testid="input-rsvp-name"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="rsvp-email">Email (optional)</Label>
+              <Input
+                id="rsvp-email"
+                type="email"
+                value={guest.email}
+                onChange={(e) => setGuest({ ...guest, email: e.target.value })}
+                placeholder="alex@example.com"
+                data-testid="input-rsvp-email"
+              />
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="rsvp-email">Email (optional)</Label>
-            <Input
-              id="rsvp-email"
-              type="email"
-              value={guest.email}
-              onChange={(e) => setGuest({ ...guest, email: e.target.value })}
-              placeholder="alex@example.com"
-              data-testid="input-rsvp-email"
-            />
-          </div>
+
           <div className="space-y-2">
             <Label>Will you be there?</Label>
             <div className="grid grid-cols-1 gap-2">
               {RESPONSE_OPTIONS.map((opt) => {
                 const Icon = opt.icon;
-                const selected = response === opt.value;
-                const isPending = submit.isPending && selected;
+                const isSelected = response === opt.value;
+                const isPending = submit.isPending && isSelected;
                 return (
                   <button
                     key={opt.value}
                     type="button"
-                    data-selected={selected}
                     data-testid={`rsvp-option-${opt.value}`}
                     onClick={() => tryPick(opt.value)}
                     disabled={busy}
-                    className={`flex items-center gap-3 rounded-md border p-3 text-left text-sm font-medium transition disabled:opacity-60 ${opt.classes}`}
+                    className={`flex items-center gap-3 rounded-xl border p-3 text-left text-sm font-medium transition-all disabled:opacity-60 ${
+                      isSelected ? opt.selected : opt.base
+                    }`}
                   >
-                    <Icon className="h-4 w-4" />
-                    {isPending ? "Saving..." : opt.label}
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {isPending ? "Saving…" : opt.label}
                   </button>
                 );
               })}
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               Tap a response to save it instantly. You can change it anytime.
             </p>
           </div>
 
           {myRsvp && (
-            <div className="border-t pt-4">
+            <div className="border-t border-border pt-4">
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="w-full justify-center text-red-600 hover:bg-red-50 hover:text-red-700"
+                className="w-full justify-center text-destructive hover:bg-destructive/10 hover:text-destructive"
                 onClick={() => remove.mutate()}
                 disabled={busy}
                 data-testid="button-remove-my-rsvp"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                {remove.isPending ? "Removing..." : "Remove my RSVP"}
+                {remove.isPending ? "Removing…" : "Remove my RSVP"}
               </Button>
-              <p className="mt-1 text-center text-xs text-gray-500">
+              <p className="mt-1 text-center text-xs text-muted-foreground">
                 Takes you off the attendee list entirely.
               </p>
             </div>

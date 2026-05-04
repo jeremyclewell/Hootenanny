@@ -163,13 +163,13 @@ export default function ClaimItemModal() {
         {selectedItem && (
           <>
             <div className="mb-4">
-              <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                <div className="w-10 h-10 bg-primary text-white rounded-lg flex items-center justify-center">
+              <div className="flex items-center gap-3 p-3 bg-sand-100 rounded-xl border border-border">
+                <div className="w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center shrink-0">
                   <UtensilsCrossed className="h-5 w-5" />
                 </div>
                 <div>
-                  <h4 className="font-medium text-gray-900">{selectedItem.name}</h4>
-                  <p className="text-sm text-gray-600">
+                  <h4 className="font-medium text-foreground">{selectedItem.name}</h4>
+                  <p className="text-sm text-muted-foreground">
                     {categoryNames[selectedItem.category as keyof typeof categoryNames] || selectedItem.category}
                   </p>
                 </div>

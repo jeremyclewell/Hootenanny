@@ -9,10 +9,7 @@ const STORAGE_KEY = "hootenanny-voter";
 
 type PublicRsvp = Omit<Rsvp, "guestEmail">;
 
-interface StoredGuest {
-  name: string;
-  email: string;
-}
+interface StoredGuest { name: string; email: string; }
 
 function loadStoredGuest(): StoredGuest | null {
   try {
@@ -22,70 +19,33 @@ function loadStoredGuest(): StoredGuest | null {
     const name = typeof parsed?.name === "string" ? parsed.name.trim() : "";
     if (!name) return null;
     return { name, email: typeof parsed?.email === "string" ? parsed.email : "" };
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
-const STATUS: Record<
-  RsvpResponse,
-  {
-    label: string;
-    icon: React.ComponentType<{ className?: string }>;
-    cardClass: string;
-    iconClass: string;
-  }
-> = {
-  yes: {
-    label: "Going",
-    icon: Check,
-    cardClass: "border-green-200 bg-green-50",
-    iconClass: "text-green-600",
-  },
-  maybe: {
-    label: "Maybe",
-    icon: HelpCircle,
-    cardClass: "border-amber-200 bg-amber-50",
-    iconClass: "text-amber-600",
-  },
-  no: {
-    label: "Can't make it",
-    icon: X,
-    cardClass: "border-red-200 bg-red-50",
-    iconClass: "text-red-600",
-  },
+const STATUS: Record<RsvpResponse, { label: string; icon: React.ComponentType<{ className?: string }>; cardClass: string; iconClass: string; dotClass: string }> = {
+  yes:   { label: "Going",          icon: Check,       cardClass: "border-sage-100 bg-sage-50",       iconClass: "text-sage-600",  dotClass: "bg-sage-400"  },
+  maybe: { label: "Maybe",          icon: HelpCircle,  cardClass: "border-sand-200 bg-sand-100",      iconClass: "text-sand-600",  dotClass: "bg-sand-400"  },
+  no:    { label: "Can't make it",  icon: X,           cardClass: "border-terracotta-100 bg-terracotta-50", iconClass: "text-primary", dotClass: "bg-primary" },
 };
 
-interface RsvpCtaProps {
-  eventId: string;
-  eventTitle: string;
-}
+interface RsvpCtaProps { eventId: string; eventTitle: string; }
 
 export default function RsvpCta({ eventId, eventTitle }: RsvpCtaProps) {
   const [guest, setGuest] = useState<StoredGuest | null>(null);
 
   useEffect(() => {
     setGuest(loadStoredGuest());
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY) setGuest(loadStoredGuest());
-    };
+    const onStorage = (e: StorageEvent) => { if (e.key === STORAGE_KEY) setGuest(loadStoredGuest()); };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  const rsvpsQuery = useQuery<PublicRsvp[]>({
-    queryKey: [`/api/events/${eventId}/rsvps`],
-  });
+  const rsvpsQuery = useQuery<PublicRsvp[]>({ queryKey: [`/api/events/${eventId}/rsvps`] });
 
-  // Refresh stored guest whenever RSVPs update (covers same-tab updates after submit)
-  useEffect(() => {
-    setGuest(loadStoredGuest());
-  }, [rsvpsQuery.dataUpdatedAt]);
+  useEffect(() => { setGuest(loadStoredGuest()); }, [rsvpsQuery.dataUpdatedAt]);
 
   const myRsvp = guest
-    ? (rsvpsQuery.data || []).find(
-        (r) => r.guestName.trim().toLowerCase() === guest.name.toLowerCase()
-      )
+    ? (rsvpsQuery.data || []).find((r) => r.guestName.trim().toLowerCase() === guest.name.toLowerCase())
     : undefined;
 
   if (rsvpsQuery.isLoading) return null;
@@ -95,27 +55,23 @@ export default function RsvpCta({ eventId, eventTitle }: RsvpCtaProps) {
     const Icon = status.icon;
     return (
       <div
-        className={`mb-6 flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between ${status.cardClass}`}
+        className={`mb-6 flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between ${status.cardClass}`}
         data-testid="rsvp-cta-confirmed"
       >
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-card shadow-sm shrink-0">
             <Icon className={`h-5 w-5 ${status.iconClass}`} />
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-900">
-              You're RSVP'd: {status.label}
-            </p>
-            <p className="text-xs text-gray-600">
-              Changed your mind? Update your response anytime.
-            </p>
+            <p className="text-sm font-semibold text-foreground">You're RSVP'd: {status.label}</p>
+            <p className="text-xs text-muted-foreground">Changed your mind? Update anytime.</p>
           </div>
         </div>
         <RsvpDialog
           eventId={eventId}
           trigger={
             <Button variant="outline" size="sm" data-testid="button-update-rsvp">
-              <Pencil className="mr-2 h-4 w-4" />
+              <Pencil className="mr-2 h-3.5 w-3.5" />
               Update RSVP
             </Button>
           }
@@ -126,30 +82,22 @@ export default function RsvpCta({ eventId, eventTitle }: RsvpCtaProps) {
 
   return (
     <div
-      className="mb-6 flex flex-col gap-3 rounded-xl border border-primary/30 bg-gradient-to-r from-primary/10 to-blue-50 p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+      className="mb-6 flex flex-col gap-4 rounded-2xl border border-primary/25 bg-gradient-to-r from-terracotta-50 to-sand-100 p-5 shadow-warm sm:flex-row sm:items-center sm:justify-between"
       data-testid="rsvp-cta-prompt"
     >
       <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-sm">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-white shadow-sm">
           <MailCheck className="h-5 w-5" />
         </div>
         <div>
-          <p className="text-base font-semibold text-gray-900">
-            Are you coming to {eventTitle}?
-          </p>
-          <p className="text-sm text-gray-600">
-            Let the host know with a quick RSVP — yes, no, or maybe.
-          </p>
+          <p className="font-serif font-semibold text-foreground">Are you coming to {eventTitle}?</p>
+          <p className="text-sm text-muted-foreground">Let the host know — yes, no, or maybe.</p>
         </div>
       </div>
       <RsvpDialog
         eventId={eventId}
         trigger={
-          <Button
-            size="lg"
-            className="bg-primary hover:bg-primary/90"
-            data-testid="button-rsvp-cta"
-          >
+          <Button className="bg-primary hover:bg-primary/90 shadow-sm" data-testid="button-rsvp-cta">
             <MailCheck className="mr-2 h-4 w-4" />
             RSVP now
           </Button>

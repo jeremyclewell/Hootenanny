@@ -12,328 +12,223 @@ interface ItemCategoriesProps {
   eventId: string;
 }
 
-const categoryIcons = {
-  'main-dishes': Drumstick,
-  'sides': Leaf,
-  'appetizers': Apple,
-  'desserts': Cake,
-  'beverages': GlassWater,
-};
-
-const categoryNames = {
-  'main-dishes': 'Main Dishes',
-  'sides': 'Side Dishes',
-  'appetizers': 'Appetizers',
-  'desserts': 'Desserts',
-  'beverages': 'Beverages',
-};
-
-const categoryColors = {
-  'main-dishes': 'bg-red-100 text-red-600',
-  'sides': 'bg-green-100 text-green-600',
-  'appetizers': 'bg-yellow-100 text-yellow-600',
-  'desserts': 'bg-pink-100 text-pink-600',
-  'beverages': 'bg-blue-100 text-blue-600',
+const categoryConfig: Record<string, { icon: React.ComponentType<{ className?: string }>; name: string; iconBg: string; iconColor: string }> = {
+  "main-dishes": { icon: Drumstick, name: "Main Dishes",    iconBg: "bg-terracotta-100", iconColor: "text-primary" },
+  "sides":       { icon: Leaf,      name: "Side Dishes",    iconBg: "bg-sage-100",       iconColor: "text-sage-600" },
+  "appetizers":  { icon: Apple,     name: "Appetizers",     iconBg: "bg-sand-100",       iconColor: "text-sand-600" },
+  "desserts":    { icon: Cake,      name: "Desserts",       iconBg: "bg-terracotta-100", iconColor: "text-primary" },
+  "beverages":   { icon: GlassWater,name: "Beverages",      iconBg: "bg-teal-100",       iconColor: "text-teal-500" },
 };
 
 export default function ItemCategories({ items, eventId }: ItemCategoriesProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Delete item mutation
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/items`] });
+    queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/stats`] });
+  };
+
   const deleteItemMutation = useMutation({
     mutationFn: async (itemId: number) => {
       const response = await fetch(`/api/items/${itemId}`, {
         method: "DELETE",
         body: JSON.stringify({ eventId }),
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
       });
       if (!response.ok) throw new Error("Failed to delete item");
       return response.json();
     },
     onMutate: async (itemId: number) => {
-      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
       await queryClient.cancelQueries({ queryKey: [`/api/events/${eventId}/items`] });
       await queryClient.cancelQueries({ queryKey: [`/api/events/${eventId}/stats`] });
-
-      // Snapshot the previous value
       const previousItems = queryClient.getQueryData([`/api/events/${eventId}/items`]);
       const previousStats = queryClient.getQueryData([`/api/events/${eventId}/stats`]);
-
-      // Optimistically update to the new value
-      queryClient.setQueryData([`/api/events/${eventId}/items`], (old: any) => 
-        old ? old.filter((item: any) => item.id !== itemId) : []
+      queryClient.setQueryData([`/api/events/${eventId}/items`], (old: unknown) =>
+        Array.isArray(old) ? old.filter((item: Item) => item.id !== itemId) : []
       );
-
-      // Return a context object with the snapshotted value
       return { previousItems, previousStats };
     },
-    onError: (err, itemId, context) => {
-      // If the mutation fails, use the context returned from onMutate to roll back
+    onError: (_err, _id, context) => {
       queryClient.setQueryData([`/api/events/${eventId}/items`], context?.previousItems);
       queryClient.setQueryData([`/api/events/${eventId}/stats`], context?.previousStats);
-      toast({
-        title: "Error",
-        description: "Failed to remove item. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to remove item.", variant: "destructive" });
     },
-    onSettled: () => {
-      // Always refetch after error or success to ensure we have the correct data
-      queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/items`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/stats`] });
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Item removed successfully!",
-      });
-    },
+    onSuccess: () => toast({ title: "Item removed" }),
+    onSettled: invalidate,
   });
 
-  // Group items by category
-  const itemsByCategory = items.reduce((acc, item) => {
-    if (!acc[item.category]) {
-      acc[item.category] = [];
-    }
-    acc[item.category].push(item);
-    return acc;
-  }, {} as Record<string, Item[]>);
-
-  const handleClaimItem = (item: Item) => {
-    if (item.claimedBy) return;
-    
-    // Check if user name is already saved
-    const savedName = localStorage.getItem('potluck-user-name');
-    
-    if (savedName) {
-      // Auto-claim with saved info
-      window.dispatchEvent(new CustomEvent('autoClaimItem', { 
-        detail: { 
-          item, 
-          name: savedName, 
-          email: localStorage.getItem('potluck-user-email') || '' 
-        } 
-      }));
-    } else {
-      // Show modal for first-time users
-      window.dispatchEvent(new CustomEvent('openClaimModal', { detail: item }));
-    }
-  };
-
-  const handleDeleteItem = (e: React.MouseEvent, itemId: number) => {
-    e.stopPropagation(); // Prevent triggering claim action
-    deleteItemMutation.mutate(itemId);
-  };
-
-  const handleEditItem = (e: React.MouseEvent, item: Item) => {
-    e.stopPropagation(); // Prevent triggering claim action
-    window.dispatchEvent(new CustomEvent('openEditItemModal', { detail: item }));
-  };
-
-  // Unclaim item mutation
   const unclaimItemMutation = useMutation({
     mutationFn: async (itemId: number) => {
       const response = await fetch(`/api/items/${itemId}/unclaim`, {
         method: "POST",
         body: JSON.stringify({ eventId }),
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
       });
       if (!response.ok) throw new Error("Failed to unclaim item");
       return response.json();
     },
     onMutate: async (itemId: number) => {
-      // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: [`/api/events/${eventId}/items`] });
-      await queryClient.cancelQueries({ queryKey: [`/api/events/${eventId}/stats`] });
-
-      // Snapshot the previous value
       const previousItems = queryClient.getQueryData([`/api/events/${eventId}/items`]);
       const previousStats = queryClient.getQueryData([`/api/events/${eventId}/stats`]);
-
-      // Optimistically unclaim the item
-      queryClient.setQueryData([`/api/events/${eventId}/items`], (old: any) => 
-        old ? old.map((item: any) => 
-          item.id === itemId 
-            ? { ...item, claimedBy: null, claimedByEmail: null, claimedAt: null }
-            : item
-        ) : []
+      queryClient.setQueryData([`/api/events/${eventId}/items`], (old: unknown) =>
+        Array.isArray(old)
+          ? old.map((item: Item) =>
+              item.id === itemId ? { ...item, claimedBy: null, claimedByEmail: null, claimedAt: null } : item
+            )
+          : []
       );
-
       return { previousItems, previousStats };
     },
-    onError: (err, itemId, context) => {
-      // Roll back on error
+    onError: (_err, _id, context) => {
       queryClient.setQueryData([`/api/events/${eventId}/items`], context?.previousItems);
       queryClient.setQueryData([`/api/events/${eventId}/stats`], context?.previousStats);
-      toast({
-        title: "Error",
-        description: "Failed to unclaim item. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to unclaim item.", variant: "destructive" });
     },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Item unclaimed successfully!",
-      });
-    },
-    onSettled: () => {
-      // Always refetch to ensure correct data
-      queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/items`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/stats`] });
-    },
+    onSuccess: () => toast({ title: "Item unclaimed" }),
+    onSettled: invalidate,
   });
 
-  const handleUnclaimItem = (e: React.MouseEvent, itemId: number) => {
-    e.stopPropagation(); // Prevent triggering claim action
-    unclaimItemMutation.mutate(itemId);
+  const handleClaimItem = (item: Item) => {
+    if (item.claimedBy) return;
+    const savedName = localStorage.getItem("potluck-user-name");
+    if (savedName) {
+      window.dispatchEvent(new CustomEvent("autoClaimItem", {
+        detail: { item, name: savedName, email: localStorage.getItem("potluck-user-email") || "" },
+      }));
+    } else {
+      window.dispatchEvent(new CustomEvent("openClaimModal", { detail: item }));
+    }
   };
 
-  const renderCategorySection = (category: string, categoryItems: Item[]) => {
-    const Icon = categoryIcons[category as keyof typeof categoryIcons] || UtensilsCrossed;
-    const claimed = categoryItems.filter(item => item.claimedBy).length;
-    const available = categoryItems.length - claimed;
+  const itemsByCategory = items.reduce((acc, item) => {
+    if (!acc[item.category]) acc[item.category] = [];
+    acc[item.category].push(item);
+    return acc;
+  }, {} as Record<string, Item[]>);
+
+  const renderSection = (category: string, categoryItems: Item[]) => {
+    const cfg = categoryConfig[category] ?? { icon: UtensilsCrossed, name: category, iconBg: "bg-sand-100", iconColor: "text-sand-600" };
+    const Icon = cfg.icon;
+    const claimed = categoryItems.filter((i) => i.claimedBy).length;
 
     return (
-      <div key={category} className="bg-white rounded-xl shadow-material overflow-hidden">
-        <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+      <div key={category} className="bg-card rounded-2xl border border-border shadow-warm overflow-hidden">
+        {/* Category header */}
+        <div className="bg-sand-100 border-b border-border px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${categoryColors[category as keyof typeof categoryColors] || 'bg-gray-100 text-gray-600'}`}>
-                <Icon className="h-4 w-4" />
+            <div className="flex items-center gap-3">
+              <div className={`w-8 h-8 ${cfg.iconBg} rounded-lg flex items-center justify-center`}>
+                <Icon className={`h-4 w-4 ${cfg.iconColor}`} />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                {categoryNames[category as keyof typeof categoryNames] || category}
-              </h3>
-              <Badge variant="secondary" className="text-xs">
-                {categoryItems.length} items
+              <h3 className="font-serif font-semibold text-foreground">{cfg.name}</h3>
+              <Badge variant="secondary" className="text-xs bg-sand-200 text-sand-600 border-0">
+                {categoryItems.length}
               </Badge>
             </div>
-            <span className="text-sm text-gray-600">
-              {claimed} claimed • {available} available
+            <span className="text-sm text-muted-foreground">
+              {claimed} claimed · {categoryItems.length - claimed} open
             </span>
           </div>
         </div>
-        
-        <div className="p-6">
-          <div className="grid gap-4">
-            {categoryItems.map((item) => (
-              <div
-                key={item.id}
-                className={`flex items-center justify-between p-4 border border-gray-200 rounded-lg transition-all duration-200 ${
-                  item.claimedBy
-                    ? 'hover:border-gray-300'
-                    : 'hover:border-primary hover:shadow-sm cursor-pointer'
-                }`}
-                onClick={() => handleClaimItem(item)}
-              >
-                <div className="flex items-center space-x-4">
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                    item.claimedBy
-                      ? 'bg-green-100'
-                      : 'bg-gray-100'
-                  }`}>
-                    {item.claimedBy ? (
-                      <Check className="h-5 w-5 text-green-600" />
-                    ) : (
-                      <UtensilsCrossed className="h-5 w-5 text-gray-400" />
-                    )}
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-gray-900">
-                      {item.name}
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      {item.claimedBy ? (
-                        <>Claimed by <span className="font-medium text-primary">{item.claimedBy}</span></>
-                      ) : (
-                        'Click to claim this item'
-                      )}
-                    </p>
-                  </div>
+
+        {/* Items */}
+        <div className="p-4 grid gap-3">
+          {categoryItems.map((item) => (
+            <div
+              key={item.id}
+              onClick={() => handleClaimItem(item)}
+              className={`flex items-center justify-between rounded-xl border p-4 transition-all duration-200 ${
+                item.claimedBy
+                  ? "border-sage-100 bg-sage-50 cursor-default"
+                  : "border-border bg-card hover:border-primary hover:shadow-warm cursor-pointer"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                  item.claimedBy ? "bg-sage-100" : "bg-sand-100"
+                }`}>
+                  {item.claimedBy
+                    ? <Check className="h-5 w-5 text-sage-600" />
+                    : <UtensilsCrossed className="h-5 w-5 text-sand-600" />
+                  }
                 </div>
+                <div>
+                  <p className="font-medium text-foreground">{item.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {item.claimedBy
+                      ? <span>Claimed by <span className="font-medium text-primary">{item.claimedBy}</span></span>
+                      : "Tap to claim"
+                    }
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                 {item.claimedBy ? (
-                  <div className="flex items-center space-x-2">
-                    <Badge className="bg-green-600 hover:bg-green-600">
-                      Claimed
-                    </Badge>
+                  <>
+                    <Badge className="bg-sage-400 hover:bg-sage-400 text-white border-0">Claimed</Badge>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-9 w-9 p-0"
-                          onClick={(e) => e.stopPropagation()}
-                        >
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground">
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
-                          onClick={(e) => handleUnclaimItem(e, item.id)}
+                          onClick={() => unclaimItemMutation.mutate(item.id)}
                           disabled={unclaimItemMutation.isPending}
-                          className="cursor-pointer text-orange-600 focus:text-orange-600"
+                          className="cursor-pointer text-destructive focus:text-destructive"
                         >
                           <X className="mr-2 h-4 w-4" />
-                          Unclaim Item
+                          Unclaim
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  </div>
+                  </>
                 ) : (
-                  <div className="flex items-center space-x-2">
-                    <Button className="bg-primary hover:bg-primary/90">
-                      {localStorage.getItem('potluck-user-name') ? 'Claim Item' : 'Claim Item'}
+                  <>
+                    <Button size="sm" className="bg-primary hover:bg-primary/90">
+                      Claim
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-9 w-9 p-0"
-                          onClick={(e) => e.stopPropagation()}
-                        >
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground">
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
-                          onClick={(e) => handleEditItem(e, item)}
+                          onClick={() => window.dispatchEvent(new CustomEvent("openEditItemModal", { detail: item }))}
                           className="cursor-pointer"
                         >
                           <Pencil className="mr-2 h-4 w-4" />
-                          Edit Item
+                          Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={(e) => handleDeleteItem(e, item.id)}
+                          onClick={() => deleteItemMutation.mutate(item.id)}
                           disabled={deleteItemMutation.isPending}
-                          className="cursor-pointer text-red-600 focus:text-red-600"
+                          className="cursor-pointer text-destructive focus:text-destructive"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
-                          Delete Item
+                          Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  </div>
+                  </>
                 )}
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </div>
     );
   };
 
   return (
-    <div className="space-y-8">
-      {Object.entries(itemsByCategory).map(([category, categoryItems]) =>
-        renderCategorySection(category, categoryItems)
-      )}
+    <div className="space-y-6">
+      {Object.entries(itemsByCategory).map(([cat, catItems]) => renderSection(cat, catItems))}
     </div>
   );
 }

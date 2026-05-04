@@ -6,12 +6,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import { Share, Utensils, MapPin, Users, Calendar, CalendarPlus, Download, MailCheck, Hourglass } from "lucide-react";
+import { Share, Utensils, MapPin, Users, Calendar, CalendarPlus, Download, MailCheck, Clock, Hourglass } from "lucide-react";
 import type { Event } from "@shared/schema";
 import { buildGoogleCalendarUrl, downloadIcsFile } from "@/lib/calendar";
-import { formatDuration } from "@/lib/duration";
 import { SiGooglecalendar } from "react-icons/si";
 import RsvpDialog from "@/components/rsvp-dialog";
+import { formatDuration } from "@/lib/duration";
 
 interface EventHeaderProps {
   event: Event;
@@ -22,29 +22,16 @@ export default function EventHeader({ event }: EventHeaderProps) {
 
   const handleShare = async () => {
     const url = window.location.href;
-    
     if (navigator.share) {
       try {
-        await navigator.share({
-          title: event.title,
-          text: event.description || `Join ${event.title} potluck event!`,
-          url,
-        });
-      } catch (error) {
-        // User cancelled sharing
-      }
+        await navigator.share({ title: event.title, text: event.description || `Join ${event.title}!`, url });
+      } catch {}
     } else {
       try {
         await navigator.clipboard.writeText(url);
-        toast({
-          title: "Link Copied!",
-          description: "Event link has been copied to your clipboard.",
-        });
-      } catch (error) {
-        toast({
-          title: "Share",
-          description: `Share this link: ${url}`,
-        });
+        toast({ title: "Link copied!", description: "Event link copied to clipboard." });
+      } catch {
+        toast({ title: "Share", description: `Share this link: ${url}` });
       }
     }
   };
@@ -57,58 +44,46 @@ export default function EventHeader({ event }: EventHeaderProps) {
     return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
   };
 
-  const getThemeIcon = (theme: string) => {
+  const themeIcon = (theme: string) => {
     switch (theme) {
-      case 'pool-party':
-        return '🏊‍♀️';
-      case 'bbq':
-        return '🔥';
-      case 'kids-party':
-        return '🎂';
-      case 'thanksgiving':
-        return '🦃';
-      default:
-        return '🍽️';
+      case "pool-party": return "🏊‍♀️";
+      case "bbq": return "🔥";
+      case "kids-party": return "🎂";
+      case "thanksgiving": return "🦃";
+      default: return "🍽️";
     }
   };
 
   return (
     <>
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+      {/* Nav bar */}
+      <header className="bg-card border-b border-border shadow-warm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                <Utensils className="text-white text-lg" />
+              <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-sm">
+                <Utensils className="text-white h-4 w-4" />
               </div>
               <div>
-                <h1 className="text-xl font-semibold text-gray-900">Hootenanny</h1>
-                <p className="text-sm text-gray-500">{event.title}</p>
+                <span className="text-lg font-serif font-semibold text-foreground">Hootenanny</span>
+                <p className="text-xs text-muted-foreground leading-none">{event.title}</p>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-2">
               {event.date && event.pollStatus !== "polling" && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" data-testid="button-add-to-calendar">
+                    <Button variant="outline" size="sm" data-testid="button-add-to-calendar">
                       <CalendarPlus className="mr-2 h-4 w-4" />
-                      Add to Calendar
+                      <span className="hidden sm:inline">Add to Calendar</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem
                       onClick={() => {
                         const url = buildGoogleCalendarUrl(event);
-                        if (url) {
-                          window.open(url, "_blank", "noopener,noreferrer");
-                        } else {
-                          toast({
-                            title: "Unable to add to calendar",
-                            description: "This event is missing a valid date.",
-                            variant: "destructive",
-                          });
-                        }
+                        if (url) window.open(url, "_blank", "noopener,noreferrer");
+                        else toast({ title: "Missing date", variant: "destructive" });
                       }}
                       data-testid="menu-google-calendar"
                     >
@@ -118,18 +93,8 @@ export default function EventHeader({ event }: EventHeaderProps) {
                     <DropdownMenuItem
                       onClick={() => {
                         const ok = downloadIcsFile(event);
-                        if (!ok) {
-                          toast({
-                            title: "Unable to add to calendar",
-                            description: "This event is missing a valid date.",
-                            variant: "destructive",
-                          });
-                          return;
-                        }
-                        toast({
-                          title: "Calendar file downloaded",
-                          description: "Open the .ics file to add it to Apple Calendar, Outlook, or another app.",
-                        });
+                        if (!ok) { toast({ title: "Missing date", variant: "destructive" }); return; }
+                        toast({ title: "Calendar file downloaded", description: "Open the .ics file to add it to Apple Calendar or Outlook." });
                       }}
                       data-testid="menu-ics-download"
                     >
@@ -143,14 +108,14 @@ export default function EventHeader({ event }: EventHeaderProps) {
                 <RsvpDialog
                   eventId={event.id}
                   trigger={
-                    <Button variant="outline" data-testid="button-rsvp">
+                    <Button variant="outline" size="sm" data-testid="button-rsvp">
                       <MailCheck className="mr-2 h-4 w-4" />
                       RSVP
                     </Button>
                   }
                 />
               )}
-              <Button onClick={handleShare} className="bg-primary hover:bg-primary/90">
+              <Button onClick={handleShare} size="sm" className="bg-primary hover:bg-primary/90">
                 <Share className="mr-2 h-4 w-4" />
                 Share
               </Button>
@@ -159,51 +124,54 @@ export default function EventHeader({ event }: EventHeaderProps) {
         </div>
       </header>
 
-      {/* Event Info */}
+      {/* Event info card */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-        <div className="bg-white rounded-xl shadow-material p-6 mb-8">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <span className="text-xl">{getThemeIcon(event.theme)}</span>
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">{event.title}</h2>
-                  {event.date && (
-                    <p className="text-gray-600">
-                      {event.date}
-                      {event.time && ` • ${formatTime(event.time)}`}
-                    </p>
-                  )}
-                  {event.pollStatus === "polling" && (
-                    <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                      <Calendar className="h-3 w-3" />
-                      Date being chosen by guests
-                    </span>
-                  )}
-                </div>
+        <div className="bg-card rounded-2xl border border-border shadow-warm p-6 mb-8">
+          <div className="flex items-start gap-4">
+            <div className="w-14 h-14 bg-terracotta-100 rounded-2xl flex items-center justify-center text-2xl shrink-0">
+              {themeIcon(event.theme)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-2xl font-serif font-bold text-foreground mb-1">{event.title}</h2>
+
+              {/* Date / time / duration */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mb-3">
+                {event.date && (
+                  <span className="flex items-center gap-1.5">
+                    <Calendar className="h-3.5 w-3.5 text-primary" />
+                    {event.date}
+                    {event.time && ` · ${formatTime(event.time)}`}
+                  </span>
+                )}
+                {event.durationMinutes && event.date && (
+                  <span className="flex items-center gap-1.5">
+                    <Hourglass className="h-3.5 w-3.5 text-primary" />
+                    {formatDuration(event.durationMinutes)}
+                  </span>
+                )}
+                {event.pollStatus === "polling" && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-sand-100 border border-sand-200 px-2.5 py-0.5 text-xs font-medium text-sand-600">
+                    <Calendar className="h-3 w-3" />
+                    Date being voted on
+                  </span>
+                )}
               </div>
+
               {event.description && (
-                <p className="text-gray-700 mb-4">{event.description}</p>
+                <p className="text-sm text-muted-foreground mb-3 leading-relaxed">{event.description}</p>
               )}
-              <div className="flex items-center space-x-6 text-sm text-gray-600 flex-wrap gap-2">
+
+              <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                 {event.location && (
-                  <span className="flex items-center">
-                    <MapPin className="mr-2 h-4 w-4" />
+                  <span className="flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-primary" />
                     {event.location}
                   </span>
                 )}
                 {event.expectedGuests && (
-                  <span className="flex items-center">
-                    <Users className="mr-2 h-4 w-4" />
+                  <span className="flex items-center gap-1.5">
+                    <Users className="h-3.5 w-3.5 text-primary" />
                     {event.expectedGuests} expected guests
-                  </span>
-                )}
-                {event.pollStatus !== "polling" && event.date && (
-                  <span className="flex items-center" data-testid="text-duration">
-                    <Hourglass className="mr-2 h-4 w-4" />
-                    {formatDuration(event.durationMinutes)}
                   </span>
                 )}
               </div>

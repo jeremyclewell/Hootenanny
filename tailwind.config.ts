@@ -10,7 +10,39 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      fontFamily: {
+        serif: ["Lora", "Georgia", "serif"],
+        sans: ["Inter", "system-ui", "sans-serif"],
+      },
       colors: {
+        terracotta: {
+          50:  "hsl(14, 90%, 96%)",
+          100: "hsl(14, 80%, 91%)",
+          400: "hsl(14, 62%, 62%)",
+          500: "hsl(14, 56%, 51%)",
+          600: "hsl(14, 60%, 43%)",
+          700: "hsl(14, 60%, 34%)",
+        },
+        sand: {
+          100: "hsl(35, 60%, 93%)",
+          200: "hsl(35, 50%, 85%)",
+          400: "hsl(35, 51%, 66%)",
+          600: "hsl(35, 40%, 48%)",
+        },
+        sage: {
+          50:  "hsl(164, 35%, 95%)",
+          100: "hsl(164, 28%, 88%)",
+          400: "hsl(164, 23%, 58%)",
+          600: "hsl(164, 26%, 42%)",
+          700: "hsl(164, 28%, 30%)",
+        },
+        teal: {
+          50:  "hsl(188, 60%, 95%)",
+          100: "hsl(188, 55%, 88%)",
+          400: "hsl(188, 52%, 54%)",
+          500: "hsl(188, 52%, 40%)",
+          700: "hsl(188, 55%, 26%)",
+        },
         background: "var(--background)",
         foreground: "var(--foreground)",
         card: {
