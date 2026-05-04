@@ -88,6 +88,15 @@
   }
 }
 
+/* Break the table formatting context so flex rows in the DayPicker calendar
+   align their click targets with their visual positions. Without this,
+   thead/tbody remain display:table-row-group and the browser's table layout
+   engine overrides the flex class on <tr>, causing an off-by-one click offset. */
+.rdp thead,
+.rdp tbody {
+  display: block;
+}
+
 .shadow-warm {
   box-shadow: 0 1px 3px rgba(60, 30, 10, 0.08), 0 4px 12px rgba(60, 30, 10, 0.08);
 }
