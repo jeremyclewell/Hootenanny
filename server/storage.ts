@@ -1,4 +1,4 @@
-import { events, items, dateVotes, type Event, type InsertEvent, type Item, type InsertItem, type EditItem, type DateVote, type SubmitVote } from "@shared/schema";
+import { events, items, dateVotes, rsvps, type Event, type InsertEvent, type Item, type InsertItem, type EditItem, type DateVote, type SubmitVote, type Rsvp, type SubmitRsvp } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -30,6 +30,10 @@ export interface IStorage {
   // Date polling
   getEventVotes(eventId: string): Promise<DateVote[]>;
   upsertVote(eventId: string, vote: SubmitVote): Promise<DateVote>;
+
+  // RSVPs
+  getEventRsvps(eventId: string): Promise<Rsvp[]>;
+  upsertRsvp(eventId: string, rsvp: SubmitRsvp): Promise<Rsvp>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -217,6 +221,47 @@ export class DatabaseStorage implements IStorage {
         voterName: vote.voterName,
         voterEmail: email || null,
         selectedDates: vote.selectedDates,
+      })
+      .returning();
+    return created;
+  }
+
+  async getEventRsvps(eventId: string): Promise<Rsvp[]> {
+    return await db.select().from(rsvps).where(eq(rsvps.eventId, eventId));
+  }
+
+  async upsertRsvp(eventId: string, rsvp: SubmitRsvp): Promise<Rsvp> {
+    const email = rsvp.guestEmail || "";
+    const existing = await db
+      .select()
+      .from(rsvps)
+      .where(eq(rsvps.eventId, eventId));
+
+    const match = existing.find(
+      (r) =>
+        r.guestName.trim().toLowerCase() === rsvp.guestName.trim().toLowerCase() &&
+        (r.guestEmail || "").trim().toLowerCase() === email.trim().toLowerCase()
+    );
+
+    if (match) {
+      const [updated] = await db
+        .update(rsvps)
+        .set({
+          response: rsvp.response,
+          updatedAt: new Date(),
+        })
+        .where(eq(rsvps.id, match.id))
+        .returning();
+      return updated;
+    }
+
+    const [created] = await db
+      .insert(rsvps)
+      .values({
+        eventId,
+        guestName: rsvp.guestName,
+        guestEmail: email || null,
+        response: rsvp.response,
       })
       .returning();
     return created;

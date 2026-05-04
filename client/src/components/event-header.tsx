@@ -6,10 +6,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import { Share, Utensils, MapPin, Users, Calendar, CalendarPlus, Download } from "lucide-react";
+import { Share, Utensils, MapPin, Users, Calendar, CalendarPlus, Download, MailCheck } from "lucide-react";
 import type { Event } from "@shared/schema";
 import { buildGoogleCalendarUrl, downloadIcsFile } from "@/lib/calendar";
 import { SiGooglecalendar } from "react-icons/si";
+import RsvpDialog from "@/components/rsvp-dialog";
 
 interface EventHeaderProps {
   event: Event;
@@ -136,6 +137,17 @@ export default function EventHeader({ event }: EventHeaderProps) {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+              )}
+              {event.pollStatus !== "polling" && (
+                <RsvpDialog
+                  eventId={event.id}
+                  trigger={
+                    <Button variant="outline" data-testid="button-rsvp">
+                      <MailCheck className="mr-2 h-4 w-4" />
+                      RSVP
+                    </Button>
+                  }
+                />
               )}
               <Button onClick={handleShare} className="bg-primary hover:bg-primary/90">
                 <Share className="mr-2 h-4 w-4" />

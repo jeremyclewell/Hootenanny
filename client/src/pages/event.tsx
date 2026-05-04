@@ -11,6 +11,7 @@ import ClaimItemModal from "@/components/claim-item-modal";
 import EditItemModal from "@/components/edit-item-modal";
 import PollView from "@/components/poll-view";
 import ReopenPollBanner from "@/components/reopen-poll-banner";
+import RsvpList from "@/components/rsvp-list";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle } from "lucide-react";
@@ -73,6 +74,10 @@ export default function Event() {
 
     if (lastMessage.type === "voteSubmitted") {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/votes`] });
+    }
+
+    if (lastMessage.type === "rsvpSubmitted") {
+      queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/rsvps`] });
     }
 
     if (lastMessage.type === "dateFinalized" || lastMessage.type === "pollReopened") {
@@ -140,6 +145,7 @@ export default function Event() {
               <ReopenPollBanner event={event} hostToken={hostToken} />
             )}
             <QuickStats stats={stats} />
+            <RsvpList eventId={event.id} isHost={isHost} />
             <AddCustomItem eventId={event.id} />
             <ItemCategories items={items} eventId={event.id} />
             <ClaimItemModal />

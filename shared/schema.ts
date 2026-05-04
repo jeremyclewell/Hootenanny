@@ -37,6 +37,23 @@ export const dateVotes = pgTable("date_votes", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const rsvps = pgTable("rsvps", {
+  id: serial("id").primaryKey(),
+  eventId: text("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+  guestName: text("guest_name").notNull(),
+  guestEmail: text("guest_email"),
+  response: text("response").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const rsvpResponseEnum = z.enum(["yes", "no", "maybe"]);
+
+export const submitRsvpSchema = z.object({
+  guestName: z.string().min(1, "Name is required"),
+  guestEmail: z.string().email().optional().or(z.literal("")),
+  response: rsvpResponseEnum,
+});
+
 export const insertEventSchema = createInsertSchema(events)
   .omit({
     id: true,
@@ -94,3 +111,6 @@ export type EditItem = z.infer<typeof editItemSchema>;
 export type DateVote = typeof dateVotes.$inferSelect;
 export type SubmitVote = z.infer<typeof submitVoteSchema>;
 export type FinalizeDate = z.infer<typeof finalizeDateSchema>;
+export type Rsvp = typeof rsvps.$inferSelect;
+export type SubmitRsvp = z.infer<typeof submitRsvpSchema>;
+export type RsvpResponse = z.infer<typeof rsvpResponseEnum>;

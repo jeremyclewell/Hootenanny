@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { insertEventSchema, insertItemSchema, claimItemSchema, editItemSchema, submitVoteSchema, finalizeDateSchema, addCandidateDatesSchema, reopenPollSchema, type Event } from "@shared/schema";
+import { insertEventSchema, insertItemSchema, claimItemSchema, editItemSchema, submitVoteSchema, finalizeDateSchema, addCandidateDatesSchema, reopenPollSchema, submitRsvpSchema, type Event } from "@shared/schema";
 import { getThemeItems } from "../client/src/lib/theme-items";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -272,6 +272,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(publicEvent(updated));
     } catch (error) {
       res.status(400).json({ message: "Invalid reopen data" });
+    }
+  });
+
+  // RSVPs — list (guest emails stripped, kept private to host)
+  app.get("/api/events/:id/rsvps", async (req, res) => {
+    try {
+      const rsvps = await storage.getEventRsvps(req.params.id);
+      const publicRsvps = rsvps.map(({ guestEmail: _email, ...rest }) => rest);
+      res.json(publicRsvps);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch RSVPs" });
+    }
+  });
+
+  // Submit or update an RSVP
+  app.post("/api/events/:id/rsvps", async (req, res) => {
+    try {
+      const event = await storage.getEvent(req.params.id);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      const rsvpData = submitRsvpSchema.parse(req.body);
+      const rsvp = await storage.upsertRsvp(req.params.id, rsvpData);
+
+      const { guestEmail: _email, ...publicRsvp } = rsvp;
+
+      broadcastToEvent(req.params.id, {
+        type: "rsvpSubmitted",
+        rsvp: publicRsvp,
+      });
+
+      res.json(publicRsvp);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid RSVP data" });
     }
   });
 
