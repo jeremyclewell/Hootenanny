@@ -106,36 +106,42 @@ export default function MapBackground({ location }: MapBackgroundProps) {
   if (!show) return null;
 
   return (
-    /* Outer fixed frame — clips the perspective overflow */
+    /*
+      Outer fixed frame.
+      KEY: `perspective` as a CSS property (not inside transform:) so that
+      `perspectiveOrigin` can be set independently.
+      perspectiveOrigin: top-center puts the vanishing point at the top of the
+      screen — this means the top of the map appears at normal scale (eye is
+      right there) and the bottom fans out toward the viewer (~150% apparent
+      width), producing the "looking down at a map" aerial effect.
+    */
     <div
       className="fixed inset-0 pointer-events-none select-none overflow-hidden"
-      style={{ zIndex: 0 }}
+      style={{
+        zIndex: 0,
+        perspective: "800px",
+        perspectiveOrigin: "50% 0%",
+      }}
       aria-hidden="true"
     >
       {/*
-        Perspective wrapper:
-        - rotateX(-20deg) with transform-origin at top means the top edge
-          stays at 100% viewport width while the bottom swings toward the
-          viewer, expanding to ~150% — giving the "looking down at the map"
-          aerial-perspective feel.
-        - 130% width + negative left centres it so corners fill even when
-          the bottom fans out beyond the viewport edges.
-        - 130% height ensures the bottom of the map still covers the
-          viewport after the angular compression.
+        Inner perspective wrapper.
+        rotateX(+20deg): per MDN, positive values tilt the top away from the
+        viewer (into the screen) and bring the bottom toward the viewer.
+        With the vanishing point at the top (perspectiveOrigin above), the top
+        appears at 100% scale and the bottom appears expanded (~140-150%).
+        Width 100% + height 100% is enough because the perspective projection
+        keeps visible content within the clipping box.
       */}
       <div
         style={{
           position: "absolute",
-          /* wider than viewport so the bottom corners still fill
-             as the bottom fans out toward the viewer */
-          width: "140%",
-          height: "110%",
+          width: "100%",
+          height: "100%",
           top: 0,
-          left: "-20%",
-          /* pivot at the TOP — top edge stays at 100% width,
-             bottom swings toward viewer and appears ~150% wide */
+          left: 0,
           transformOrigin: "top center",
-          transform: "perspective(900px) rotateX(22deg)",
+          transform: "rotateX(20deg)",
         }}
       >
         <div
@@ -143,7 +149,6 @@ export default function MapBackground({ location }: MapBackgroundProps) {
           style={{
             width: "100%",
             height: "100%",
-            /* More vivid: less sepia wash, boosted saturation + contrast */
             filter: "sepia(0.08) saturate(1.25) contrast(1.25) brightness(1.0)",
             opacity: ready ? 1 : 0,
             transition: "opacity 1.0s ease",
@@ -161,7 +166,7 @@ export default function MapBackground({ location }: MapBackgroundProps) {
         />
       )}
 
-      {/* Thin cream veil — just enough to soften without washing out */}
+      {/* Thin cream veil — softens without washing out */}
       <div
         className="absolute inset-0"
         style={{ background: "hsla(52, 65%, 93%, 0.18)" }}
