@@ -39,6 +39,14 @@ export default function EventHeader({ event }: EventHeaderProps) {
     }
   };
 
+  const formatTime = (time: string) => {
+    const [h, m] = time.split(":").map(Number);
+    if (Number.isNaN(h) || Number.isNaN(m)) return time;
+    const period = h >= 12 ? "PM" : "AM";
+    const hour12 = h % 12 === 0 ? 12 : h % 12;
+    return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
+  };
+
   const getThemeIcon = (theme: string) => {
     switch (theme) {
       case 'pool-party':
@@ -91,7 +99,10 @@ export default function EventHeader({ event }: EventHeaderProps) {
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">{event.title}</h2>
                   {event.date && (
-                    <p className="text-gray-600">{event.date}</p>
+                    <p className="text-gray-600">
+                      {event.date}
+                      {event.time && ` • ${formatTime(event.time)}`}
+                    </p>
                   )}
                   {event.pollStatus === "polling" && (
                     <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">

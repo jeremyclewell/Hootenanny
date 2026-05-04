@@ -36,6 +36,7 @@ export default function CreateEvent() {
       description: null,
       theme: "",
       date: null,
+      time: null,
       location: null,
       expectedGuests: null,
     },
@@ -85,6 +86,7 @@ export default function CreateEvent() {
       createEventMutation.mutate({
         ...data,
         date: null,
+        time: null,
         pollStatus: "polling",
         candidateDates: sorted.map((d) => format(d, "yyyy-MM-dd")),
       });
@@ -273,17 +275,29 @@ export default function CreateEvent() {
                       )}
                     />
 
-                    <div className="flex flex-col">
-                      <label className="flex items-center gap-2 text-sm font-medium leading-none mb-2">
-                        <Clock className="h-4 w-4" />
-                        Event Time (Optional)
-                      </label>
-                      <Input
-                        type="time"
-                        placeholder="Select time"
-                        className="w-full"
-                      />
-                    </div>
+                    <FormField
+                      control={form.control}
+                      name="time"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2">
+                            <Clock className="h-4 w-4" />
+                            Event Time (Optional)
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="time"
+                              placeholder="Select time"
+                              className="w-full"
+                              {...field}
+                              value={field.value || ""}
+                              onChange={(e) => field.onChange(e.target.value || null)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
                     <FormField
                       control={form.control}

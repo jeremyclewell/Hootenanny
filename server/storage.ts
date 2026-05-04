@@ -7,7 +7,7 @@ export interface IStorage {
   // Event operations
   createEvent(event: InsertEvent): Promise<Event>;
   getEvent(id: string): Promise<Event | undefined>;
-  finalizeEventDate(id: string, date: string): Promise<Event | undefined>;
+  finalizeEventDate(id: string, date: string, time?: string | null): Promise<Event | undefined>;
 
   // Item operations
   getEventItems(eventId: string): Promise<Item[]>;
@@ -41,6 +41,7 @@ export class DatabaseStorage implements IStorage {
         id,
         hostToken,
         date: insertEvent.date || null,
+        time: insertEvent.time || null,
         description: insertEvent.description || null,
         location: insertEvent.location || null,
         expectedGuests: insertEvent.expectedGuests || null,
@@ -56,10 +57,10 @@ export class DatabaseStorage implements IStorage {
     return event || undefined;
   }
 
-  async finalizeEventDate(id: string, date: string): Promise<Event | undefined> {
+  async finalizeEventDate(id: string, date: string, time?: string | null): Promise<Event | undefined> {
     const [event] = await db
       .update(events)
-      .set({ date, pollStatus: "finalized" })
+      .set({ date, time: time || null, pollStatus: "finalized" })
       .where(eq(events.id, id))
       .returning();
     return event || undefined;

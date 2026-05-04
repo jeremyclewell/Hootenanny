@@ -8,6 +8,7 @@ export const events = pgTable("events", {
   description: text("description"),
   theme: text("theme").notNull(),
   date: text("date"),
+  time: text("time"),
   location: text("location"),
   expectedGuests: integer("expected_guests"),
   pollStatus: text("poll_status").default("none").notNull(),
@@ -70,6 +71,7 @@ export const submitVoteSchema = z.object({
 
 export const finalizeDateSchema = z.object({
   date: z.string().min(1, "Date is required"),
+  time: z.string().optional().nullable(),
   hostToken: z.string().min(1, "Host token is required"),
 });
 

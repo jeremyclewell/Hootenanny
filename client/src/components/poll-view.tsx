@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { CalendarCheck, CheckCircle2, Crown, Trophy, Users } from "lucide-react";
+import { CalendarCheck, CheckCircle2, Clock, Crown, Trophy, Users } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import type { Event, DateVote } from "@shared/schema";
 
@@ -39,6 +39,7 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
   const [voter, setVoter] = useState<StoredVoter>(() => loadStoredVoter());
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [hydrated, setHydrated] = useState(false);
+  const [finalizeTime, setFinalizeTime] = useState<string>("");
 
   const votesQuery = useQuery<DateVote[]>({
     queryKey: [`/api/events/${event.id}/votes`],
@@ -93,6 +94,7 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
     mutationFn: async (date: string) => {
       const res = await apiRequest("POST", `/api/events/${event.id}/finalize`, {
         date,
+        time: finalizeTime || null,
         hostToken,
       });
       return res.json();
@@ -250,6 +252,26 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
+          {isHost && (
+            <div className="flex flex-wrap items-end gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="finalize-time" className="flex items-center gap-2 text-sm">
+                  <Clock className="h-4 w-4" />
+                  Event time (optional)
+                </Label>
+                <Input
+                  id="finalize-time"
+                  type="time"
+                  value={finalizeTime}
+                  onChange={(e) => setFinalizeTime(e.target.value)}
+                  className="w-40"
+                />
+              </div>
+              <p className="text-xs text-gray-600">
+                Pick a start time before locking in the date. You can leave it blank.
+              </p>
+            </div>
+          )}
           {tally.length === 0 && (
             <p className="text-sm text-gray-500">No candidate dates set.</p>
           )}
