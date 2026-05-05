@@ -13,8 +13,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Check, HelpCircle, X, MailCheck, Trash2 } from "lucide-react";
-import type { Rsvp, RsvpResponse } from "@shared/schema";
+import { Check, HelpCircle, X, Mail, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { Event, Rsvp, RsvpResponse } from "@shared/schema";
 
 interface RsvpDialogProps {
   eventId: string;
@@ -40,29 +41,41 @@ const RESPONSE_OPTIONS: Array<{
   value: RsvpResponse;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  base: string;
-  selected: string;
+  defaultIconBg: string;
+  defaultIconColor: string;
+  selectedIconBg: string;
+  selectedBorder: string;
+  selectedBg: string;
 }> = [
   {
     value: "yes",
     label: "Yes, I'll be there",
     icon: Check,
-    base: "border-sage-100 bg-sage-50 text-sage-700 hover:bg-sage-100",
-    selected: "border-sage-400 bg-sage-400 text-white",
+    defaultIconBg: "bg-sage-100",
+    defaultIconColor: "text-sage-600",
+    selectedIconBg: "bg-sage-500 text-white",
+    selectedBorder: "border-sage-400",
+    selectedBg: "bg-sage-50",
   },
   {
     value: "maybe",
-    label: "Maybe",
+    label: "Maybe — I'll try to make it",
     icon: HelpCircle,
-    base: "border-sand-200 bg-sand-100 text-sand-600 hover:bg-sand-200",
-    selected: "border-sand-400 bg-sand-400 text-white",
+    defaultIconBg: "bg-sand-100",
+    defaultIconColor: "text-sand-600",
+    selectedIconBg: "bg-sand-400 text-white",
+    selectedBorder: "border-sand-400",
+    selectedBg: "bg-sand-50",
   },
   {
     value: "no",
-    label: "Can't make it",
+    label: "Can't make it this time",
     icon: X,
-    base: "border-terracotta-100 bg-terracotta-50 text-primary hover:bg-terracotta-100",
-    selected: "border-primary bg-primary text-white",
+    defaultIconBg: "bg-terracotta-50",
+    defaultIconColor: "text-primary",
+    selectedIconBg: "bg-primary text-white",
+    selectedBorder: "border-primary",
+    selectedBg: "bg-terracotta-50",
   },
 ];
 
@@ -79,6 +92,11 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
     }
   }, [open]);
 
+  const eventQuery = useQuery<Event>({
+    queryKey: [`/api/events/${eventId}`],
+    enabled: open,
+  });
+
   const rsvpsQuery = useQuery<PublicRsvp[]>({
     queryKey: [`/api/events/${eventId}/rsvps`],
     enabled: open,
@@ -92,6 +110,13 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
     );
     return matches.length === 1 ? matches[0] : undefined;
   }, [rsvpsQuery.data, guest.name]);
+
+  // Pre-select response if user already RSVP'd
+  useEffect(() => {
+    if (myRsvp && response === null) {
+      setResponse(myRsvp.response);
+    }
+  }, [myRsvp, response]);
 
   const submit = useMutation({
     mutationFn: async (chosen: RsvpResponse) => {
@@ -139,34 +164,52 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
     },
   });
 
-  const tryPick = (chosen: RsvpResponse) => {
+  const handleSave = () => {
     if (!guest.name.trim()) {
       toast({ title: "Name required", description: "Please enter your name first.", variant: "destructive" });
       return;
     }
-    setResponse(chosen);
-    submit.mutate(chosen);
+    if (!response) {
+      toast({ title: "Pick a response", description: "Let the host know if you're coming.", variant: "destructive" });
+      return;
+    }
+    submit.mutate(response);
   };
 
   const busy = submit.isPending || remove.isPending;
+  const eventTitle = eventQuery.data?.title;
+  const ctaLabel = response === "yes" ? "I'm in! 🎉" : "Save my RSVP";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
+        {/* Header */}
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 font-serif">
-            <MailCheck className="h-5 w-5 text-primary" />
-            RSVP to this hootenanny
-          </DialogTitle>
-          <DialogDescription>
-            Let the host know if you're coming. You can update your response anytime.
-          </DialogDescription>
+          <div className="flex items-start gap-3 pr-12">
+            <div className="w-11 h-11 rounded-xl bg-terracotta-100 flex items-center justify-center shrink-0">
+              <Mail className="h-5 w-5 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <DialogTitle className="font-serif text-2xl font-bold text-foreground leading-tight">
+                Are you coming?
+              </DialogTitle>
+              <DialogDescription className="mt-1.5 text-sm text-muted-foreground">
+                Let the host know if you'll make {eventTitle ? <span className="font-medium text-foreground">{eventTitle}</span> : "this hootenanny"}. You can change your response anytime.
+              </DialogDescription>
+            </div>
+          </div>
+          {/* Sparkle decoration to the left of close */}
+          <span className="absolute right-16 top-7 text-sage-400 text-sm" aria-hidden>✦</span>
         </DialogHeader>
-        <div className="space-y-4">
+
+        <div className="space-y-5">
+          {/* Name + Email */}
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="rsvp-name">Your name</Label>
+              <Label htmlFor="rsvp-name" className="text-sm font-semibold text-foreground">
+                Your name
+              </Label>
               <Input
                 id="rsvp-name"
                 value={guest.name}
@@ -177,7 +220,9 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="rsvp-email">Email (optional)</Label>
+              <Label htmlFor="rsvp-email" className="text-sm font-semibold text-foreground">
+                Email <span className="font-normal text-muted-foreground">(optional)</span>
+              </Label>
               <Input
                 id="rsvp-email"
                 type="email"
@@ -189,37 +234,62 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
             </div>
           </div>
 
+          {/* Response options */}
           <div className="space-y-2">
-            <Label>Will you be there?</Label>
-            <div className="grid grid-cols-1 gap-2">
+            <Label className="text-sm font-semibold text-foreground">Will you be there?</Label>
+            <div className="space-y-2">
               {RESPONSE_OPTIONS.map((opt) => {
                 const Icon = opt.icon;
                 const isSelected = response === opt.value;
-                const isPending = submit.isPending && isSelected;
                 return (
                   <button
                     key={opt.value}
                     type="button"
                     data-testid={`rsvp-option-${opt.value}`}
-                    onClick={() => tryPick(opt.value)}
+                    onClick={() => setResponse(opt.value)}
                     disabled={busy}
-                    className={`flex items-center gap-3 rounded-xl border p-3 text-left text-sm font-medium transition-all disabled:opacity-60 ${
-                      isSelected ? opt.selected : opt.base
-                    }`}
+                    className={cn(
+                      "relative flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all disabled:opacity-60",
+                      isSelected
+                        ? `${opt.selectedBorder} ${opt.selectedBg}`
+                        : "border-border/60 bg-card hover:border-sand-300"
+                    )}
                   >
-                    <Icon className="h-4 w-4 shrink-0" />
-                    {isPending ? "Saving…" : opt.label}
+                    <div className={cn(
+                      "w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors",
+                      isSelected ? opt.selectedIconBg : opt.defaultIconBg
+                    )}>
+                      <Icon className={cn("h-4 w-4", isSelected ? "" : opt.defaultIconColor)} />
+                    </div>
+                    <span className="text-base font-medium text-foreground flex-1">{opt.label}</span>
+                    {isSelected && (
+                      <span className="text-foreground/70 text-sm shrink-0" aria-hidden>✦</span>
+                    )}
                   </button>
                 );
               })}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Tap a response to save it instantly. You can change it anytime.
-            </p>
           </div>
 
+          {/* Footer copy */}
+          <p className="text-center text-xs text-muted-foreground">
+            We'll only use your email to send updates about this event.
+          </p>
+
+          {/* CTA */}
+          <Button
+            type="button"
+            onClick={handleSave}
+            disabled={busy || !response}
+            className="w-full bg-primary hover:bg-primary/90 rounded-full h-12 text-base font-medium shadow-sm"
+            data-testid="button-save-rsvp"
+          >
+            {submit.isPending ? "Saving…" : ctaLabel}
+          </Button>
+
+          {/* Remove existing RSVP */}
           {myRsvp && (
-            <div className="border-t border-border pt-4">
+            <div className="border-t border-border/60 pt-3">
               <Button
                 type="button"
                 variant="ghost"
@@ -232,9 +302,6 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
                 <Trash2 className="mr-2 h-4 w-4" />
                 {remove.isPending ? "Removing…" : "Remove my RSVP"}
               </Button>
-              <p className="mt-1 text-center text-xs text-muted-foreground">
-                Takes you off the attendee list entirely.
-              </p>
             </div>
           )}
         </div>
