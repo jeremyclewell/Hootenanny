@@ -124,6 +124,9 @@ Changelog:
 - June 28, 2025. Renamed application from "Shindig" to "Hootenanny"
 - June 28, 2025. Added combined edit/delete functionality with dropdown menu for unclaimed items
 - June 28, 2025. Implemented unclaim functionality allowing users to remove their claims from items
+- May 4, 2026. Address autocomplete on location field (Nominatim API, no key needed)
+- May 4, 2026. Fixed calendar date selection timezone bug (parseLocalDate helper)
+- May 4, 2026. Redesigned home page: two-column hero layout with floating UI mockup cards
 ```
 
 ## User Preferences
