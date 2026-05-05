@@ -111,19 +111,26 @@ export default function RsvpList({ eventId, isHost, hostToken }: RsvpListProps) 
                     {group.people.map((p) => (
                       <li key={p.id} className="flex items-center justify-between gap-1" data-testid={`rsvp-name-${p.id}`}>
                         <span className="truncate text-sm text-foreground">{p.guestName}</span>
-                        {isHost && (
-                          <button
-                            onClick={() => {
-                              if (!window.confirm(`Remove ${p.guestName}'s RSVP?`)) return;
-                              deleteRsvpMutation.mutate(p.id);
-                            }}
-                            disabled={deleteRsvpMutation.isPending}
-                            className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-destructive transition-colors"
-                            title="Remove RSVP"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        )}
+                        <div className="flex items-center gap-1 shrink-0">
+                          {p.plusOnes > 0 && (
+                            <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">
+                              +{p.plusOnes}
+                            </span>
+                          )}
+                          {isHost && (
+                            <button
+                              onClick={() => {
+                                if (!window.confirm(`Remove ${p.guestName}'s RSVP?`)) return;
+                                deleteRsvpMutation.mutate(p.id);
+                              }}
+                              disabled={deleteRsvpMutation.isPending}
+                              className="rounded p-0.5 text-muted-foreground hover:text-destructive transition-colors"
+                              title="Remove RSVP"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
                       </li>
                     ))}
                   </ul>

@@ -44,6 +44,7 @@ export const rsvps = pgTable("rsvps", {
   guestName: text("guest_name").notNull(),
   guestEmail: text("guest_email"),
   response: text("response").notNull(),
+  plusOnes: integer("plus_ones").default(0).notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
@@ -53,6 +54,7 @@ export const submitRsvpSchema = z.object({
   guestName: z.string().min(1, "Name is required"),
   guestEmail: z.string().email().optional().or(z.literal("")),
   response: rsvpResponseEnum,
+  plusOnes: z.number().int().min(0).max(20).default(0),
 });
 
 export const insertEventSchema = createInsertSchema(events)

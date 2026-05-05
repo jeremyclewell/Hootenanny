@@ -259,6 +259,7 @@ export class DatabaseStorage implements IStorage {
         .update(rsvps)
         .set({
           response: rsvp.response,
+          plusOnes: rsvp.plusOnes ?? 0,
           updatedAt: new Date(),
         })
         .where(eq(rsvps.id, match.id))
@@ -273,6 +274,7 @@ export class DatabaseStorage implements IStorage {
         guestName: rsvp.guestName,
         guestEmail: email || null,
         response: rsvp.response,
+        plusOnes: rsvp.plusOnes ?? 0,
       })
       .returning();
     return created;

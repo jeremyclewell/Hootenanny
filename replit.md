@@ -127,6 +127,9 @@ Changelog:
 - May 4, 2026. Address autocomplete on location field (Nominatim API, no key needed)
 - May 4, 2026. Fixed calendar date selection timezone bug (parseLocalDate helper)
 - May 4, 2026. Redesigned home page: two-column hero layout with floating UI mockup cards
+- May 5, 2026. Restyled all form fields (Input/Textarea/Select) and Dialog to match design references: soft cream bg, terracotta focus ring, rounded-xl, white-circle close button
+- May 5, 2026. Redesigned RSVP dialog: icon-box header, serif title, sage/sand/terracotta response cards, select-then-save flow, full-width pill CTA
+- May 5, 2026. Added plus-ones feature: plusOnes integer column on rsvps table, stepper UI in RSVP dialog (visible for yes/maybe responses), "+N" display in RSVP list
 ```
 
 ## User Preferences

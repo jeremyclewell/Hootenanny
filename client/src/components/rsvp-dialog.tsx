@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Check, HelpCircle, X, Mail, Trash2 } from "lucide-react";
+import { Check, HelpCircle, X, Mail, Trash2, Minus, Plus, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Event, Rsvp, RsvpResponse } from "@shared/schema";
 
@@ -79,16 +79,20 @@ const RESPONSE_OPTIONS: Array<{
   },
 ];
 
+const MAX_PLUS_ONES = 10;
+
 export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [guest, setGuest] = useState<StoredGuest>({ name: "", email: "" });
   const [response, setResponse] = useState<RsvpResponse | null>(null);
+  const [plusOnes, setPlusOnes] = useState(0);
 
   useEffect(() => {
     if (open) {
       setGuest(loadStoredGuest());
       setResponse(null);
+      setPlusOnes(0);
     }
   }, [open]);
 
@@ -111,18 +115,26 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
     return matches.length === 1 ? matches[0] : undefined;
   }, [rsvpsQuery.data, guest.name]);
 
-  // Pre-select response if user already RSVP'd
+  // Pre-populate from existing RSVP
   useEffect(() => {
-    if (myRsvp && response === null) {
-      setResponse(myRsvp.response);
+    if (myRsvp) {
+      if (response === null) setResponse(myRsvp.response as RsvpResponse);
+      setPlusOnes(myRsvp.plusOnes ?? 0);
     }
-  }, [myRsvp, response]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myRsvp?.id]);
 
   const submit = useMutation({
     mutationFn: async (chosen: RsvpResponse) => {
-      const payload: { guestName: string; response: RsvpResponse; guestEmail?: string } = {
+      const payload: {
+        guestName: string;
+        response: RsvpResponse;
+        plusOnes: number;
+        guestEmail?: string;
+      } = {
         guestName: guest.name.trim(),
         response: chosen,
+        plusOnes,
       };
       const trimmedEmail = guest.email.trim();
       if (trimmedEmail) payload.guestEmail = trimmedEmail;
@@ -195,15 +207,18 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
                 Are you coming?
               </DialogTitle>
               <DialogDescription className="mt-1.5 text-sm text-muted-foreground">
-                Let the host know if you'll make {eventTitle ? <span className="font-medium text-foreground">{eventTitle}</span> : "this hootenanny"}. You can change your response anytime.
+                Let the host know if you'll make{" "}
+                {eventTitle
+                  ? <span className="font-medium text-foreground">{eventTitle}</span>
+                  : "this hootenanny"
+                }. You can change your response anytime.
               </DialogDescription>
             </div>
           </div>
-          {/* Sparkle decoration to the left of close */}
           <span className="absolute right-16 top-7 text-sage-400 text-sm" aria-hidden>✦</span>
         </DialogHeader>
 
-        <div className="space-y-5">
+        <div className="space-y-4">
           {/* Name + Email */}
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
@@ -270,6 +285,52 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
               })}
             </div>
           </div>
+
+          {/* Plus-ones stepper — only shown when attending (yes or maybe) */}
+          {(response === "yes" || response === "maybe") && (
+            <div className="flex items-center gap-4 rounded-xl border border-border/60 bg-muted/40 px-4 py-3">
+              <div className="flex w-9 h-9 shrink-0 items-center justify-center rounded-full bg-sand-100">
+                <Users className="h-4 w-4 text-sand-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground leading-tight">Bringing anyone?</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {plusOnes === 0
+                    ? "Just you — tap + to add guests"
+                    : `+${plusOnes} guest${plusOnes === 1 ? "" : "s"} alongside you`}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  aria-label="Remove a guest"
+                  disabled={plusOnes === 0 || busy}
+                  onClick={() => setPlusOnes((n) => Math.max(0, n - 1))}
+                  className={cn(
+                    "w-8 h-8 rounded-full border border-border/60 bg-card flex items-center justify-center transition-colors",
+                    "hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+                  )}
+                >
+                  <Minus className="h-3.5 w-3.5 text-foreground" />
+                </button>
+                <span className="w-5 text-center text-base font-semibold tabular-nums text-foreground">
+                  {plusOnes}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Add a guest"
+                  disabled={plusOnes >= MAX_PLUS_ONES || busy}
+                  onClick={() => setPlusOnes((n) => Math.min(MAX_PLUS_ONES, n + 1))}
+                  className={cn(
+                    "w-8 h-8 rounded-full border border-border/60 bg-card flex items-center justify-center transition-colors",
+                    "hover:bg-muted focus:ring-2 focus:ring-primary/30 focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed"
+                  )}
+                >
+                  <Plus className="h-3.5 w-3.5 text-foreground" />
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Footer copy */}
           <p className="text-center text-xs text-muted-foreground">
