@@ -86,7 +86,7 @@ export default function Home() {
           <div className="relative h-[420px] sm:h-[460px] lg:h-[500px] hidden sm:block">
 
             {/* Card 1: Event card (top, larger) */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/4 w-[320px] bg-card rounded-2xl border border-border shadow-warm-lg p-4 z-10">
+            <div className="absolute top-0 left-1/2 -translate-x-1/4 w-[320px] bg-card rounded-2xl border border-border shadow-warm-lg p-4 z-10 rotate-2 hover:scale-110 hover:rotate-3 hover:z-30 transition-all duration-200 ease-in-out cursor-default">
               {/* RSVP badge */}
               <div className="absolute -top-3 right-4 bg-sage-700 text-white text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">
                 RSVP'D <span>✓</span>
@@ -132,7 +132,7 @@ export default function Home() {
             </div>
 
             {/* Card 2: Top date pick (bottom-left) */}
-            <div className="absolute bottom-10 left-0 w-[190px] bg-card rounded-2xl border border-border shadow-warm p-3.5 z-10">
+            <div className="absolute bottom-10 left-0 w-[190px] bg-card rounded-2xl border border-border shadow-warm p-3.5 z-10 -rotate-3 hover:scale-110 hover:-rotate-1 hover:z-30 transition-all duration-200 ease-in-out cursor-default">
               <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-2">Top date pick</p>
               <div className="flex items-center gap-3">
                 <div className="text-center">
@@ -147,7 +147,7 @@ export default function Home() {
             </div>
 
             {/* Card 3: Potluck list (bottom-right) */}
-            <div className="absolute bottom-0 right-0 w-[220px] bg-card rounded-2xl border border-border shadow-warm p-3.5 z-20">
+            <div className="absolute bottom-0 right-0 w-[220px] bg-card rounded-2xl border border-border shadow-warm p-3.5 z-20 rotate-1 hover:scale-110 hover:rotate-3 hover:z-30 transition-all duration-200 ease-in-out cursor-default">
               {/* Header */}
               <div className="flex items-center justify-between mb-2.5">
                 <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
