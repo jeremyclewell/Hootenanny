@@ -82,7 +82,7 @@ export default function RsvpCta({ eventId, eventTitle }: RsvpCtaProps) {
 
   return (
     <div
-      className="mb-6 flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 shadow-warm sm:flex-row sm:items-center sm:justify-between"
+      className="mb-6 flex flex-col gap-4 rounded-2xl border border-terracotta-100 bg-terracotta-50 p-5 sm:flex-row sm:items-center sm:justify-between"
       data-testid="rsvp-cta-prompt"
     >
       <div className="flex items-center gap-3">

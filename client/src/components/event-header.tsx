@@ -6,7 +6,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import { Share, Utensils, MapPin, Users, Calendar, CalendarPlus, Download, MailCheck, Clock, Hourglass } from "lucide-react";
+import { Upload, Utensils, MapPin, Users, Calendar, CalendarPlus, Download, MailCheck, Clock, Hourglass } from "lucide-react";
 import type { Event } from "@shared/schema";
 import { buildGoogleCalendarUrl, downloadIcsFile } from "@/lib/calendar";
 import { SiGooglecalendar } from "react-icons/si";
@@ -42,19 +42,15 @@ function calcEndTime(time: string, durationMinutes: number): string {
   return `${hour12}:${String(endM).padStart(2, "0")} ${period}`;
 }
 
-function ThemeIcon({ theme }: { theme: string }) {
-  const emoji = (() => {
-    switch (theme) {
-      case "pool-party":   return "🏊‍♀️";
-      case "bbq":          return "🔥";
-      case "kids-party":   return "🎂";
-      case "thanksgiving": return "🦃";
-      default:             return "🍽️";
-    }
-  })();
+/** Concentric-circles "event disc" icon in a soft rounded square. */
+function ThemeDisc() {
   return (
-    <div className="w-16 h-16 rounded-2xl bg-terracotta-50 border-2 border-terracotta-100 flex items-center justify-center shrink-0 text-2xl shadow-sm">
-      {emoji}
+    <div className="w-20 h-20 rounded-2xl bg-terracotta-50 border border-terracotta-100 flex items-center justify-center shrink-0">
+      <div className="relative w-12 h-12 rounded-full border-2 border-primary/50">
+        <div className="absolute inset-1.5 rounded-full border border-primary/40" />
+        <div className="absolute inset-3.5 rounded-full border border-primary/30" />
+        <div className="absolute left-1/2 top-1/2 w-1.5 h-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/70" />
+      </div>
     </div>
   );
 }
@@ -91,12 +87,6 @@ export default function EventHeader({ event }: EventHeaderProps) {
   })();
 
   const isOpenForRsvps = event.pollStatus !== "polling";
-
-  const detailCols = [
-    formattedDate && { icon: Calendar, label: "Date",     value: formattedDate },
-    timeRange      && { icon: Clock,    label: "Time",     value: timeRange },
-    event.location && { icon: MapPin,   label: "Location", value: event.location },
-  ].filter(Boolean) as { icon: React.ComponentType<{ className?: string }>; label: string; value: string }[];
 
   return (
     <>
@@ -159,8 +149,8 @@ export default function EventHeader({ event }: EventHeaderProps) {
                   }
                 />
               )}
-              <Button variant="outline" onClick={handleShare} size="sm">
-                <Share className="mr-2 h-4 w-4" />
+              <Button onClick={handleShare} size="sm" className="bg-primary hover:bg-primary/90 shadow-sm">
+                <Upload className="mr-2 h-4 w-4" />
                 Share
               </Button>
             </div>
@@ -170,87 +160,92 @@ export default function EventHeader({ event }: EventHeaderProps) {
 
       {/* Event info card */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-        <div className="relative bg-card rounded-2xl border border-border shadow-warm p-7 mb-8 overflow-hidden">
+        <div className="relative bg-card rounded-2xl border border-border shadow-warm p-7 sm:p-8 mb-6 overflow-hidden">
           {/* Asterisk decoration */}
-          <span className="absolute top-5 right-6 text-3xl text-border select-none pointer-events-none" aria-hidden>✦</span>
+          <span className="absolute top-5 right-6 text-2xl text-muted-foreground/30 select-none pointer-events-none" aria-hidden>✦</span>
 
-          {/* Top row: icon + badges */}
-          <div className="flex items-start gap-4 mb-4">
-            <ThemeIcon theme={event.theme} />
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              {isOpenForRsvps && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-sage-50 border border-sage-100 px-3 py-1 text-xs font-medium text-sage-700">
-                  <span className="w-1.5 h-1.5 rounded-full bg-sage-500 inline-block" />
-                  Open for RSVPs
-                </span>
+          <div className="flex items-start gap-5">
+            <ThemeDisc />
+
+            <div className="flex-1 min-w-0">
+              {/* Badges row */}
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                {isOpenForRsvps && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-sage-50 border border-sage-100 px-3 py-1 text-xs font-medium text-sage-700">
+                    <span className="w-1.5 h-1.5 rounded-full bg-sage-600 inline-block" />
+                    Open for RSVPs
+                  </span>
+                )}
+                {event.pollStatus === "polling" && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-sand-100 border border-sand-200 px-3 py-1 text-xs font-medium text-sand-600">
+                    <Calendar className="h-3 w-3" />
+                    Date poll open
+                  </span>
+                )}
+                {event.pollStatus === "finalized" && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 border border-teal-100 px-3 py-1 text-xs font-medium text-teal-700">
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal-500 inline-block" />
+                    Date confirmed
+                  </span>
+                )}
+              </div>
+
+              {/* Title */}
+              <h1 className="text-3xl sm:text-4xl font-serif font-bold text-foreground mb-3 leading-tight">
+                {event.title}
+              </h1>
+
+              {/* Description */}
+              {event.description && (
+                <p className="text-sm text-muted-foreground mb-7 leading-relaxed max-w-2xl">
+                  {event.description}
+                </p>
               )}
-              {event.pollStatus === "polling" && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-sand-100 border border-sand-200 px-3 py-1 text-xs font-medium text-sand-600">
-                  <Calendar className="h-3 w-3" />
-                  Date poll open
-                </span>
-              )}
-              {event.pollStatus === "finalized" && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 border border-teal-100 px-3 py-1 text-xs font-medium text-teal-700">
-                  <span className="w-1.5 h-1.5 rounded-full bg-teal-500 inline-block" />
-                  Date confirmed
-                </span>
-              )}
+
+              {/* Detail grid: 3 columns for date/time/location, then guests on its own row */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-5">
+                {formattedDate && (
+                  <DetailCell icon={Calendar} label="Date" value={formattedDate} />
+                )}
+                {timeRange && (
+                  <DetailCell icon={Clock} label="Time" value={timeRange} />
+                )}
+                {event.location && (
+                  <DetailCell icon={MapPin} label="Location" value={event.location} />
+                )}
+                {event.expectedGuests && (
+                  <DetailCell icon={Users} label="Guests" value={`${event.expectedGuests} expected`} />
+                )}
+                {event.durationMinutes && !event.time && (
+                  <DetailCell icon={Hourglass} label="Duration" value={formatDuration(event.durationMinutes)} />
+                )}
+              </div>
             </div>
           </div>
-
-          {/* Title */}
-          <h1 className="text-3xl sm:text-4xl font-serif font-bold text-foreground mb-3 leading-tight">
-            {event.title}
-          </h1>
-
-          {/* Description */}
-          {event.description && (
-            <p className="text-sm text-muted-foreground mb-6 leading-relaxed max-w-2xl">
-              {event.description}
-            </p>
-          )}
-
-          {/* Detail grid */}
-          {(detailCols.length > 0 || event.expectedGuests) && (
-            <div className="flex flex-wrap gap-x-10 gap-y-5">
-              {detailCols.map(({ icon: Icon, label, value }) => (
-                <div key={label} className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-terracotta-50 border border-terracotta-100 flex items-center justify-center shrink-0 mt-0.5">
-                    <Icon className="h-3.5 w-3.5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground font-medium mb-0.5">{label}</p>
-                    <p className="text-sm font-semibold text-foreground leading-snug">{value}</p>
-                  </div>
-                </div>
-              ))}
-              {event.expectedGuests && (
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-terracotta-50 border border-terracotta-100 flex items-center justify-center shrink-0 mt-0.5">
-                    <Users className="h-3.5 w-3.5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground font-medium mb-0.5">Guests</p>
-                    <p className="text-sm font-semibold text-foreground">{event.expectedGuests} expected</p>
-                  </div>
-                </div>
-              )}
-              {event.durationMinutes && !event.time && (
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-terracotta-50 border border-terracotta-100 flex items-center justify-center shrink-0 mt-0.5">
-                    <Hourglass className="h-3.5 w-3.5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground font-medium mb-0.5">Duration</p>
-                    <p className="text-sm font-semibold text-foreground">{formatDuration(event.durationMinutes)}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </>
+  );
+}
+
+function DetailCell({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="w-7 h-7 rounded-md bg-sand-100 flex items-center justify-center shrink-0 mt-0.5">
+        <Icon className="h-3.5 w-3.5 text-foreground/70" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
+        <p className="text-sm font-semibold text-foreground leading-snug">{value}</p>
+      </div>
+    </div>
   );
 }
