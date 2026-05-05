@@ -83,10 +83,10 @@ export default function Home() {
           </div>
 
           {/* Right: floating UI mockup cards */}
-          <div className="relative h-[500px] sm:h-[540px] lg:h-[560px] hidden sm:block">
+          <div className="relative h-[460px] hidden sm:block">
 
             {/* Card 1: Event card (top, larger) */}
-            <div className="absolute top-0 left-[15%] w-[360px] bg-card rounded-2xl border border-border shadow-warm-lg p-5 z-10 rotate-2 hover:scale-110 hover:rotate-3 hover:z-30 transition-all duration-200 ease-in-out cursor-default">
+            <div className="absolute top-0 left-[8%] w-[360px] bg-card rounded-2xl border border-border shadow-warm-lg p-5 z-20 rotate-2 hover:scale-110 hover:rotate-3 hover:z-30 transition-all duration-200 ease-in-out cursor-default">
               {/* RSVP badge */}
               <div className="absolute -top-3 right-4 bg-sage-700 text-white text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">
                 RSVP'D <span>✓</span>
@@ -145,7 +145,7 @@ export default function Home() {
             </div>
 
             {/* Card 2: Date poll (bottom-left) */}
-            <div className="absolute bottom-6 left-[8%] w-[240px] bg-card rounded-2xl border border-border shadow-warm p-4 z-10 -rotate-3 hover:scale-110 hover:-rotate-1 hover:z-30 transition-all duration-200 ease-in-out cursor-default">
+            <div className="absolute top-[185px] left-[0%] w-[240px] bg-card rounded-2xl border border-border shadow-warm p-4 z-10 -rotate-3 hover:scale-110 hover:-rotate-1 hover:z-30 transition-all duration-200 ease-in-out cursor-default">
               <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-3">Date poll · 11 votes</p>
               <div className="space-y-2.5">
                 {[
@@ -173,7 +173,7 @@ export default function Home() {
             </div>
 
             {/* Card 3: Potluck list (bottom-right) */}
-            <div className="absolute bottom-0 right-[4%] w-[255px] bg-card rounded-2xl border border-border shadow-warm p-4 z-20 rotate-1 hover:scale-110 hover:rotate-3 hover:z-30 transition-all duration-200 ease-in-out cursor-default">
+            <div className="absolute top-[200px] right-[0%] w-[255px] bg-card rounded-2xl border border-border shadow-warm p-4 z-15 rotate-1 hover:scale-110 hover:rotate-3 hover:z-30 transition-all duration-200 ease-in-out cursor-default">
               {/* Header */}
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
