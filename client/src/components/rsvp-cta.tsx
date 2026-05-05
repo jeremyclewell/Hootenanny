@@ -82,15 +82,15 @@ export default function RsvpCta({ eventId, eventTitle }: RsvpCtaProps) {
 
   return (
     <div
-      className="mb-6 flex flex-col gap-4 rounded-2xl border border-primary/25 bg-gradient-to-r from-terracotta-50 to-sand-100 p-5 shadow-warm sm:flex-row sm:items-center sm:justify-between"
+      className="mb-6 flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 shadow-warm sm:flex-row sm:items-center sm:justify-between"
       data-testid="rsvp-cta-prompt"
     >
-      <div className="flex items-start gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-white shadow-sm">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-white shadow-sm">
           <MailCheck className="h-5 w-5" />
         </div>
         <div>
-          <p className="font-serif font-semibold text-foreground">Are you coming to {eventTitle}?</p>
+          <p className="font-semibold text-foreground">Are you coming?</p>
           <p className="text-sm text-muted-foreground">Let the host know — yes, no, or maybe.</p>
         </div>
       </div>
