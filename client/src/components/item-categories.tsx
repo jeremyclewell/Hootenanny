@@ -1,5 +1,5 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Check, UtensilsCrossed, Drumstick, Leaf, Cake, GlassWater, Apple, MoreVertical, Pencil, Trash2, X } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -12,17 +12,25 @@ interface ItemCategoriesProps {
   eventId: string;
 }
 
-const categoryConfig: Record<string, { icon: React.ComponentType<{ className?: string }>; name: string; iconBg: string; iconColor: string }> = {
-  "main-dishes": { icon: Drumstick, name: "Main Dishes",    iconBg: "bg-terracotta-100", iconColor: "text-primary" },
-  "sides":       { icon: Leaf,      name: "Side Dishes",    iconBg: "bg-sage-100",       iconColor: "text-sage-600" },
-  "appetizers":  { icon: Apple,     name: "Appetizers",     iconBg: "bg-sand-100",       iconColor: "text-sand-600" },
-  "desserts":    { icon: Cake,      name: "Desserts",       iconBg: "bg-terracotta-100", iconColor: "text-primary" },
-  "beverages":   { icon: GlassWater,name: "Beverages",      iconBg: "bg-teal-100",       iconColor: "text-teal-500" },
+const categoryConfig: Record<string, { icon: React.ComponentType<{ className?: string }>; name: string }> = {
+  "main-dishes": { icon: Drumstick,   name: "Main dishes" },
+  "sides":       { icon: Leaf,        name: "Sides & salads" },
+  "appetizers":  { icon: Apple,       name: "Appetizers" },
+  "desserts":    { icon: Cake,        name: "Desserts" },
+  "beverages":   { icon: GlassWater,  name: "Beverages" },
 };
+
+/** First-name + last-initial helper for "Anya P. is bringing this" style. */
+function shortName(name: string) {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  return `${parts[0]} ${parts[parts.length - 1].charAt(0).toUpperCase()}.`;
+}
 
 export default function ItemCategories({ items, eventId }: ItemCategoriesProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [expanded, setExpanded] = useState(false);
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/items`] });
@@ -108,74 +116,96 @@ export default function ItemCategories({ items, eventId }: ItemCategoriesProps) 
     return acc;
   }, {} as Record<string, Item[]>);
 
+  const categoryEntries = Object.entries(itemsByCategory);
+  const totalCategories = categoryEntries.length;
+  const visibleEntries = expanded ? categoryEntries : categoryEntries.slice(0, 1);
+  const hiddenCount = totalCategories - visibleEntries.length;
+
   const renderSection = (category: string, categoryItems: Item[]) => {
-    const cfg = categoryConfig[category] ?? { icon: UtensilsCrossed, name: category, iconBg: "bg-sand-100", iconColor: "text-sand-600" };
-    const Icon = cfg.icon;
+    const cfg = categoryConfig[category] ?? { icon: UtensilsCrossed, name: category };
+    const CategoryIcon = cfg.icon;
     const claimed = categoryItems.filter((i) => i.claimedBy).length;
+    const open = categoryItems.length - claimed;
 
     return (
-      <div key={category} className="bg-card rounded-2xl border border-border shadow-warm overflow-hidden">
+      <div key={category} className="bg-terracotta-50 rounded-2xl p-2.5 shadow-warm" data-testid={`category-${category}`}>
         {/* Category header */}
-        <div className="bg-sand-100 border-b border-border px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`w-8 h-8 ${cfg.iconBg} rounded-lg flex items-center justify-center`}>
-                <Icon className={`h-4 w-4 ${cfg.iconColor}`} />
-              </div>
-              <h3 className="font-serif font-semibold text-foreground">{cfg.name}</h3>
-              <Badge variant="secondary" className="text-xs bg-sand-200 text-sand-600 border-0">
-                {categoryItems.length}
-              </Badge>
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-card flex items-center justify-center shadow-sm">
+              <CategoryIcon className="h-4 w-4 text-primary" />
             </div>
-            <span className="text-sm text-muted-foreground">
-              {claimed} claimed · {categoryItems.length - claimed} open
+            <h3 className="font-serif font-semibold text-foreground text-lg">{cfg.name}</h3>
+            <span className="inline-flex items-center justify-center min-w-[22px] h-[22px] rounded-full bg-terracotta-100 px-1.5 text-xs font-semibold text-primary">
+              {categoryItems.length}
             </span>
           </div>
+          <span className="text-sm text-muted-foreground">
+            {claimed} claimed · {open} open
+          </span>
         </div>
 
         {/* Items */}
-        <div className="p-4 grid gap-3">
-          {categoryItems.map((item) => (
-            <div
-              key={item.id}
-              onClick={() => handleClaimItem(item)}
-              className={`flex items-center justify-between rounded-xl border p-4 transition-all duration-200 ${
-                item.claimedBy
-                  ? "border-sage-100 bg-sage-50 cursor-default"
-                  : "border-border bg-card hover:border-primary hover:shadow-warm cursor-pointer"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                  item.claimedBy ? "bg-sage-100" : "bg-sand-100"
-                }`}>
-                  {item.claimedBy
-                    ? <Check className="h-5 w-5 text-sage-600" />
-                    : <UtensilsCrossed className="h-5 w-5 text-sand-600" />
-                  }
-                </div>
-                <div>
-                  <p className="font-medium text-foreground">{item.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {item.claimedBy
-                      ? <span>Claimed by <span className="font-medium text-primary">{item.claimedBy}</span></span>
-                      : "Tap to claim"
+        <div className="space-y-2">
+          {categoryItems.map((item) => {
+            const claimed = !!item.claimedBy;
+            return (
+              <div
+                key={item.id}
+                onClick={() => handleClaimItem(item)}
+                className={`flex items-center justify-between rounded-xl p-3 transition-all duration-200 ${
+                  claimed
+                    ? "bg-sage-50 cursor-default"
+                    : "bg-card hover:shadow-sm cursor-pointer"
+                }`}
+                data-testid={`item-${item.id}`}
+              >
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                    claimed ? "bg-sage-100" : "bg-terracotta-50"
+                  }`}>
+                    {claimed
+                      ? <Check className="h-4 w-4 text-sage-700" />
+                      : <UtensilsCrossed className="h-4 w-4 text-primary" />
                     }
-                  </p>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className={`font-medium text-foreground leading-tight ${claimed ? "line-through text-muted-foreground" : ""}`}>
+                      {item.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {claimed
+                        ? <><span className="font-medium">{shortName(item.claimedBy!)}</span> is bringing this</>
+                        : "Up for grabs"
+                      }
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                {item.claimedBy ? (
-                  <>
-                    <Badge className="bg-sage-400 hover:bg-sage-400 text-white border-0">Claimed</Badge>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                  {!claimed && (
+                    <Button
+                      size="sm"
+                      onClick={() => handleClaimItem(item)}
+                      className="bg-primary hover:bg-primary/90 rounded-full px-4 h-8 text-xs"
+                      data-testid={`button-claim-${item.id}`}
+                    >
+                      Claim
+                    </Button>
+                  )}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 rounded-full bg-card border border-border text-muted-foreground hover:bg-card"
+                        data-testid={`item-menu-${item.id}`}
+                      >
+                        <MoreVertical className="h-3.5 w-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {claimed ? (
                         <DropdownMenuItem
                           onClick={() => unclaimItemMutation.mutate(item.id)}
                           disabled={unclaimItemMutation.isPending}
@@ -184,51 +214,59 @@ export default function ItemCategories({ items, eventId }: ItemCategoriesProps) 
                           <X className="mr-2 h-4 w-4" />
                           Unclaim
                         </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </>
-                ) : (
-                  <>
-                    <Button size="sm" className="bg-primary hover:bg-primary/90">
-                      Claim
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => window.dispatchEvent(new CustomEvent("openEditItemModal", { detail: item }))}
-                          className="cursor-pointer"
-                        >
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => deleteItemMutation.mutate(item.id)}
-                          disabled={deleteItemMutation.isPending}
-                          className="cursor-pointer text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </>
-                )}
+                      ) : (
+                        <>
+                          <DropdownMenuItem
+                            onClick={() => window.dispatchEvent(new CustomEvent("openEditItemModal", { detail: item }))}
+                            className="cursor-pointer"
+                          >
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => deleteItemMutation.mutate(item.id)}
+                            disabled={deleteItemMutation.isPending}
+                            className="cursor-pointer text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     );
   };
 
+  if (categoryEntries.length === 0) return null;
+
   return (
-    <div className="space-y-6">
-      {Object.entries(itemsByCategory).map(([cat, catItems]) => renderSection(cat, catItems))}
+    <div className="space-y-4">
+      {visibleEntries.map(([cat, catItems]) => renderSection(cat, catItems))}
+
+      {/* Show all / collapse toggle */}
+      {totalCategories > 1 && (
+        <div className="flex justify-center pt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setExpanded((v) => !v)}
+            className="rounded-full bg-card shadow-sm"
+            data-testid="button-toggle-categories"
+          >
+            {expanded
+              ? `Show fewer categories`
+              : <>View all <span className="font-semibold mx-1">{totalCategories}</span> categories</>
+            }
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
