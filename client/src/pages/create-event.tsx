@@ -44,8 +44,8 @@ export default function CreateEvent() {
       description: null,
       theme: "",
       date: null,
-      time: null,
-      location: null,
+      time: "",
+      location: "",
       expectedGuests: null,
       durationMinutes: 120,
     },
@@ -93,6 +93,10 @@ export default function CreateEvent() {
         candidateDates: sorted.map((d) => format(d, "yyyy-MM-dd")),
       });
     } else {
+      if (!data.time) {
+        form.setError("time", { message: "Time is required" });
+        return;
+      }
       createEventMutation.mutate({ ...data, pollStatus: "none", candidateDates: null });
     }
   };
@@ -285,7 +289,7 @@ export default function CreateEvent() {
                         <FormItem>
                           <FormLabel className="flex items-center gap-2">
                             <Clock className="h-4 w-4" />
-                            Time <span className="text-muted-foreground font-normal">(optional)</span>
+                            Time
                           </FormLabel>
                           <FormControl>
                             <Input
@@ -293,7 +297,7 @@ export default function CreateEvent() {
                               className="w-full [color-scheme:light]"
                               {...field}
                               value={field.value || ""}
-                              onChange={(e) => field.onChange(e.target.value || null)}
+                              onChange={(e) => field.onChange(e.target.value)}
                             />
                           </FormControl>
                           <FormMessage />
@@ -425,12 +429,12 @@ export default function CreateEvent() {
                     <FormItem>
                       <FormLabel className="flex items-center gap-2">
                         <MapPin className="h-4 w-4" />
-                        Location <span className="text-muted-foreground font-normal">(optional)</span>
+                        Location
                       </FormLabel>
                       <FormControl>
                         <AddressAutocomplete
                           value={field.value || ""}
-                          onChange={(v) => field.onChange(v || null)}
+                          onChange={(v) => field.onChange(v)}
                           placeholder="123 Summer Lane, Poolside"
                         />
                       </FormControl>

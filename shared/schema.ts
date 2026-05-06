@@ -64,6 +64,9 @@ export const insertEventSchema = createInsertSchema(events)
     hostToken: true,
   })
   .extend({
+    title: z.string().min(1, "Event title is required"),
+    theme: z.string().min(1, "Event theme is required"),
+    location: z.string().min(1, "Location is required"),
     pollStatus: z.enum(["none", "polling", "finalized"]).optional(),
     candidateDates: z.array(z.string()).optional().nullable(),
     durationMinutes: z.number().int().min(15).max(24 * 60).optional(),
