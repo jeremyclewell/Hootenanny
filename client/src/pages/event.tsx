@@ -38,6 +38,7 @@ export default function EventPage() {
 
   const [hostToken, setHostToken] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("overview");
+
   useEffect(() => {
     if (!id) return;
     try {
@@ -53,17 +54,17 @@ export default function EventPage() {
   });
 
   const isPolling = eventQuery.data?.pollStatus === "polling";
-  const isHostView = !!hostToken;
+  const isHost = !!hostToken;
   const hasCandidateDates = (eventQuery.data?.candidateDates?.length ?? 0) > 0;
 
   const itemsQuery = useQuery<Item[]>({
     queryKey: [`/api/events/${id}/items`],
-    enabled: !!id && (!isPolling || isHostView),
+    enabled: !!id && !isPolling,
   });
 
   const statsQuery = useQuery<EventStats>({
     queryKey: [`/api/events/${id}/stats`],
-    enabled: !!id && (!isPolling || isHostView),
+    enabled: !!id && !isPolling,
   });
 
   const rsvpsQuery = useQuery<PublicRsvp[]>({
@@ -149,8 +150,25 @@ export default function EventPage() {
     going: rsvps.filter((r) => r.response === "yes").length,
     maybe: rsvps.filter((r) => r.response === "maybe").length,
   };
-  const isHost = isHostView;
 
+  // ─── Polling mode: date not yet confirmed ────────────────────────────────
+  // Show only the event header and the date poll. Nothing else is actionable
+  // until the host locks in a date.
+  if (isPolling) {
+    return (
+      <>
+        {event.location && <MapBackground location={event.location} />}
+        <div className="min-h-screen relative" style={{ zIndex: 1 }}>
+          <EventHeader event={event} />
+          <main className="max-w-2xl mx-auto px-4 sm:px-6 pb-16">
+            <PollView event={event} isHost={isHost} hostToken={hostToken} />
+          </main>
+        </div>
+      </>
+    );
+  }
+
+  // ─── Normal mode: date confirmed (or optional date, no poll) ─────────────
   return (
     <>
       {event.location && <MapBackground location={event.location} />}
@@ -159,16 +177,17 @@ export default function EventPage() {
         <EventHeader event={event} />
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-          {!isPolling && <RsvpCta eventId={event.id} eventTitle={event.title} />}
+          <RsvpCta eventId={event.id} eventTitle={event.title} />
+
           {isHost && event.pollStatus === "finalized" && (
             <ReopenPollBanner event={event} hostToken={hostToken} />
           )}
 
           <QuickStats
             stats={stats}
-            rsvpStats={!isPolling ? rsvpStats : undefined}
+            rsvpStats={rsvpStats}
             voteCount={votes.length}
-            showVotes={hasCandidateDates}
+            showVotes={false}
           />
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -188,15 +207,6 @@ export default function EventPage() {
                 >
                   Potluck
                 </TabsTrigger>
-                {hasCandidateDates && (
-                  <TabsTrigger
-                    value="dates"
-                    className="rounded-full px-5 py-2 data-[state=active]:bg-card data-[state=active]:shadow-warm data-[state=inactive]:text-muted-foreground"
-                    data-testid="tab-dates"
-                  >
-                    Dates
-                  </TabsTrigger>
-                )}
                 <TabsTrigger
                   value="guests"
                   className="rounded-full px-5 py-2 data-[state=active]:bg-card data-[state=active]:shadow-warm data-[state=inactive]:text-muted-foreground"
@@ -208,85 +218,22 @@ export default function EventPage() {
             </div>
 
             <TabsContent value="overview" className="mt-0">
-              {isPolling && !isHost && hasCandidateDates ? (
-                <EventOverview
-                  event={event}
-                  items={items}
-                  stats={stats}
-                  onViewDates={() => setActiveTab("dates")}
-                  onViewPotluck={() => setActiveTab("potluck")}
-                />
-              ) : (
-                <EventOverview
-                  event={event}
-                  items={items}
-                  stats={stats}
-                  onViewDates={() => setActiveTab("dates")}
-                  onViewPotluck={() => setActiveTab("potluck")}
-                />
-              )}
+              <EventOverview
+                event={event}
+                items={items}
+                stats={stats}
+                onViewDates={() => {}}
+                onViewPotluck={() => setActiveTab("potluck")}
+              />
             </TabsContent>
 
             <TabsContent value="potluck" className="mt-0 space-y-4">
-              {isPolling && !isHost ? (
-                <div className="bg-card rounded-2xl border border-border shadow-warm p-8 text-center">
-                  <CalendarCheck className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
-                  <h3 className="font-serif font-semibold text-foreground mb-1">
-                    Potluck list opens once a date is locked
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Vote on a date first — then you'll be able to claim items here.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <AddCustomItem eventId={event.id} />
-                  <ItemCategories items={items} eventId={event.id} />
-                </>
-              )}
+              <AddCustomItem eventId={event.id} />
+              <ItemCategories items={items} eventId={event.id} />
             </TabsContent>
 
-            {hasCandidateDates && (
-              <TabsContent value="dates" className="mt-0">
-                {event.pollStatus === "finalized" && event.date ? (
-                  <div className="bg-card rounded-2xl border border-border shadow-warm p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-sage-50 border border-sage-100 flex items-center justify-center shrink-0">
-                        <CalendarCheck className="h-6 w-6 text-sage-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold text-sage-700 uppercase tracking-wide mb-1">
-                          Date confirmed
-                        </p>
-                        <p className="text-2xl font-serif font-bold text-foreground">
-                          {format(parseISO(event.date), "EEEE, MMM d, yyyy")}
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          The host has locked in the date. You can RSVP and start claiming items.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <PollView event={event} isHost={isHost} hostToken={hostToken} />
-                )}
-              </TabsContent>
-            )}
-
             <TabsContent value="guests" className="mt-0">
-              {isPolling && !isHost ? (
-                <div className="bg-card rounded-2xl border border-border shadow-warm p-8 text-center">
-                  <CalendarCheck className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
-                  <h3 className="font-serif font-semibold text-foreground mb-1">
-                    RSVPs open once a date is locked
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Once the date is set, guests can RSVP and you'll see them here.
-                  </p>
-                </div>
-              ) : (
-                <RsvpList eventId={event.id} isHost={isHost} hostToken={hostToken} />
-              )}
+              <RsvpList eventId={event.id} isHost={isHost} hostToken={hostToken} />
             </TabsContent>
           </Tabs>
 
