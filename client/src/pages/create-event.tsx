@@ -22,6 +22,7 @@ import { DURATION_OPTIONS } from "@/lib/duration";
 import { format } from "date-fns";
 import { Link } from "wouter";
 import AddressAutocomplete from "@/components/address-autocomplete";
+import { cn } from "@/lib/utils";
 
 type DateMode = "fixed" | "poll";
 
@@ -251,7 +252,11 @@ export default function CreateEvent() {
                               <FormControl>
                                 <Button
                                   variant="outline"
-                                  className={`w-full pl-3 text-left font-normal ${!field.value && "text-muted-foreground"}`}
+                                  className={cn(
+                                    "h-11 w-full rounded-xl border border-border/60 bg-muted/50 px-4 text-base font-normal text-left transition-colors",
+                                    "hover:bg-card hover:border-border focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20",
+                                    !field.value && "text-muted-foreground/70"
+                                  )}
                                 >
                                   {field.value ? format(parseLocalDate(field.value), "PPP") : <span>Pick a date</span>}
                                   <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
@@ -285,7 +290,7 @@ export default function CreateEvent() {
                           <FormControl>
                             <Input
                               type="time"
-                              className="w-full"
+                              className="w-full [color-scheme:light]"
                               {...field}
                               value={field.value || ""}
                               onChange={(e) => field.onChange(e.target.value || null)}
