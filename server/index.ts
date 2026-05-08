@@ -29,8 +29,8 @@ app.use((req, res, next) => {
         logLine += ` :: ${JSON.stringify(sanitized)}`;
       }
 
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
+      if (logLine.length > 200) {
+        logLine = logLine.slice(0, 199) + "…";
       }
 
       log(logLine);

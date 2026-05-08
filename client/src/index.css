@@ -104,12 +104,3 @@
 .shadow-warm-lg {
   box-shadow: 0 4px 8px rgba(60, 30, 10, 0.10), 0 16px 32px rgba(60, 30, 10, 0.10);
 }
-
-/* Keep old class for any remaining references */
-.shadow-material {
-  box-shadow: 0 1px 3px rgba(60, 30, 10, 0.08), 0 4px 12px rgba(60, 30, 10, 0.08);
-}
-
-.shadow-material-lg {
-  box-shadow: 0 4px 8px rgba(60, 30, 10, 0.10), 0 16px 32px rgba(60, 30, 10, 0.10);
-}

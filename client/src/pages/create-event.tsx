@@ -23,13 +23,9 @@ import { format } from "date-fns";
 import { Link } from "wouter";
 import AddressAutocomplete from "@/components/address-autocomplete";
 import { cn } from "@/lib/utils";
+import { parseLocalDate, pollWindowEnd, startOfToday } from "@/lib/calendar";
 
 type DateMode = "fixed" | "poll";
-
-function parseLocalDate(dateStr: string): Date {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y, m - 1, d);
-}
 
 export default function CreateEvent() {
   const [, setLocation] = useLocation();
@@ -101,9 +97,8 @@ export default function CreateEvent() {
     }
   };
 
-  const today = new Date(new Date().setHours(0, 0, 0, 0));
-  const fourWeeksOut = new Date(today);
-  fourWeeksOut.setDate(fourWeeksOut.getDate() + 28);
+  const today = startOfToday();
+  const fourWeeksOut = pollWindowEnd();
 
   return (
     <div className="min-h-screen bg-background">

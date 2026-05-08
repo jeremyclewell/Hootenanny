@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { claimItemSchema, type ClaimItem, type Item } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { getCategory } from "@/lib/categories";
 import { UtensilsCrossed } from "lucide-react";
 
 export default function ClaimItemModal() {
@@ -94,38 +95,37 @@ export default function ClaimItemModal() {
     },
   });
 
-  // Listen for modal open events and auto-claim events
+  // Hold the latest mutation/form refs so the window-listener effect can
+  // run once and still see fresh values without re-binding every render.
+  const mutationRef = useRef(claimItemMutation);
+  const formRef = useRef(form);
+  useEffect(() => { mutationRef.current = claimItemMutation; }, [claimItemMutation]);
+  useEffect(() => { formRef.current = form; }, [form]);
+
   useEffect(() => {
-    const handleOpenModal = (event: CustomEvent<Item>) => {
-      setSelectedItem(event.detail);
+    const handleOpenModal = (event: Event) => {
+      const detail = (event as CustomEvent<Item>).detail;
+      setSelectedItem(detail);
       setIsOpen(true);
-      
-      // Load saved data when opening modal
-      const savedName = localStorage.getItem('potluck-user-name');
-      const savedEmail = localStorage.getItem('potluck-user-email');
-      
-      form.reset({
-        name: savedName || "",
-        email: savedEmail || "",
-      });
+      const savedName = localStorage.getItem("potluck-user-name");
+      const savedEmail = localStorage.getItem("potluck-user-email");
+      formRef.current.reset({ name: savedName || "", email: savedEmail || "" });
     };
 
-    const handleAutoClaimItem = (event: CustomEvent<{ item: Item; name: string; email: string }>) => {
-      const { item, name, email } = event.detail;
+    const handleAutoClaimItem = (event: Event) => {
+      const { item, name, email } = (event as CustomEvent<{ item: Item; name: string; email: string }>).detail;
       setSelectedItem(item);
-      
-      // Directly submit the claim without showing modal
-      claimItemMutation.mutate({ name, email });
+      mutationRef.current.mutate({ name, email });
     };
 
-    window.addEventListener('openClaimModal' as any, handleOpenModal);
-    window.addEventListener('autoClaimItem' as any, handleAutoClaimItem);
-    
+    window.addEventListener("openClaimModal", handleOpenModal);
+    window.addEventListener("autoClaimItem", handleAutoClaimItem);
+
     return () => {
-      window.removeEventListener('openClaimModal' as any, handleOpenModal);
-      window.removeEventListener('autoClaimItem' as any, handleAutoClaimItem);
+      window.removeEventListener("openClaimModal", handleOpenModal);
+      window.removeEventListener("autoClaimItem", handleAutoClaimItem);
     };
-  }, [form, claimItemMutation]);
+  }, []);
 
   const onSubmit = (data: ClaimItem) => {
     // Save user data to localStorage for future use
@@ -140,14 +140,6 @@ export default function ClaimItemModal() {
   const handleClose = () => {
     setIsOpen(false);
     form.reset();
-  };
-
-  const categoryNames = {
-    'main-dishes': 'Main Dishes',
-    'sides': 'Side Dishes',
-    'appetizers': 'Appetizers',
-    'desserts': 'Desserts',
-    'beverages': 'Beverages',
   };
 
   return (
@@ -170,7 +162,7 @@ export default function ClaimItemModal() {
                 <div>
                   <h4 className="font-medium text-foreground">{selectedItem.name}</h4>
                   <p className="text-sm text-muted-foreground">
-                    {categoryNames[selectedItem.category as keyof typeof categoryNames] || selectedItem.category}
+                    {getCategory(selectedItem.category).name}
                   </p>
                 </div>
               </div>
@@ -228,7 +220,7 @@ export default function ClaimItemModal() {
                     className="flex-1 bg-primary hover:bg-primary/90"
                     disabled={claimItemMutation.isPending}
                   >
-                    {claimItemMutation.isPending ? "Claiming..." : "Claim Item"}
+                    {claimItemMutation.isPending ? "Claiming…" : "Claim Item"}
                   </Button>
                 </div>
               </form>

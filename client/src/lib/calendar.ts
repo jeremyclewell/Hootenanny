@@ -1,5 +1,30 @@
 import type { Event } from "@shared/schema";
 
+/** Parse a yyyy-MM-dd string into a local-time Date (no UTC shift). */
+export function parseLocalDate(dateStr: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/** Today at 00:00 local time, useful for calendar `disabled={(d) => d < startOfToday()}`. */
+export function startOfToday(): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+/** Date `days` from `from` (defaults to today), at the same time-of-day as `from`. */
+export function addDays(from: Date, days: number): Date {
+  const d = new Date(from);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+/** The end of the date-poll window: 4 weeks from today. */
+export function pollWindowEnd(): Date {
+  return addDays(startOfToday(), 28);
+}
+
 function parseEventDateTime(
   date: string,
   time?: string | null,

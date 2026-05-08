@@ -9,6 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { insertItemSchema, type InsertItem } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { CATEGORIES } from "@/lib/categories";
 import { Plus, PlusCircle } from "lucide-react";
 import { z } from "zod";
 
@@ -111,11 +112,9 @@ export default function AddCustomItem({ eventId }: AddCustomItemProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="main-dishes">Main Dishes</SelectItem>
-                      <SelectItem value="sides">Side Dishes</SelectItem>
-                      <SelectItem value="desserts">Desserts</SelectItem>
-                      <SelectItem value="beverages">Beverages</SelectItem>
-                      <SelectItem value="appetizers">Appetizers</SelectItem>
+                      {CATEGORIES.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

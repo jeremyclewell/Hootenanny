@@ -13,6 +13,7 @@ import { CalendarCheck, CalendarPlus, CheckCircle2, Clock, Crown, Hourglass, Plu
 import { DURATION_OPTIONS } from "@/lib/duration";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, parseISO } from "date-fns";
+import { pollWindowEnd, startOfToday } from "@/lib/calendar";
 import type { Event, DateVote } from "@shared/schema";
 
 interface PollViewProps {
@@ -45,9 +46,8 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
   const [extraDates, setExtraDates] = useState<Date[]>([]);
   const [addOpen, setAddOpen] = useState(false);
 
-  const today = new Date(new Date().setHours(0, 0, 0, 0));
-  const fourWeeksOut = new Date(today);
-  fourWeeksOut.setDate(fourWeeksOut.getDate() + 28);
+  const today = startOfToday();
+  const fourWeeksOut = pollWindowEnd();
 
   const votesQuery = useQuery<DateVote[]>({ queryKey: [`/api/events/${event.id}/votes`] });
   const votes = votesQuery.data || [];
