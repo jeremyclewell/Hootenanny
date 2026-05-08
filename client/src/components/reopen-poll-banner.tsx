@@ -18,6 +18,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { CalendarRange, RotateCcw } from "lucide-react";
+import { parseLocalDate, pollWindowEnd, startOfToday } from "@/lib/calendar";
 import type { Event } from "@shared/schema";
 
 interface ReopenPollBannerProps {
@@ -30,9 +31,8 @@ export default function ReopenPollBanner({ event, hostToken }: ReopenPollBannerP
   const [open, setOpen] = useState(false);
   const [extraDates, setExtraDates] = useState<Date[]>([]);
 
-  const today = new Date(new Date().setHours(0, 0, 0, 0));
-  const fourWeeksOut = new Date(today);
-  fourWeeksOut.setDate(fourWeeksOut.getDate() + 28);
+  const today = startOfToday();
+  const fourWeeksOut = pollWindowEnd();
 
   const reopenMutation = useMutation({
     mutationFn: async () => {
@@ -87,14 +87,15 @@ export default function ReopenPollBanner({ event, hostToken }: ReopenPollBannerP
             <AlertDialogHeader>
               <AlertDialogTitle>Reopen date polling?</AlertDialogTitle>
               <AlertDialogDescription>
-                The current date{event.date ? ` (${event.date})` : ""} will be unset and added back
-                into the candidate list so prior votes still count. Guests can vote again, and any
-                items they've already claimed stay claimed. Optionally pick more dates to add to the
-                poll.
+                The current date
+                {event.date ? ` (${format(parseLocalDate(event.date), "EEE, MMM d, yyyy")})` : ""} will
+                be unset and added back into the candidate list so prior votes still count. Guests
+                can vote again, and any items they've already claimed stay claimed. Optionally pick
+                more dates to add to the poll.
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <div className="rounded-md border border-gray-200 p-2">
-              <p className="mb-2 text-xs text-gray-600">
+            <div className="rounded-md border border-border p-2">
+              <p className="mb-2 text-xs text-muted-foreground">
                 Add additional candidate dates (optional):
               </p>
               <div className="flex justify-center">
@@ -118,7 +119,7 @@ export default function ReopenPollBanner({ event, hostToken }: ReopenPollBannerP
                   reopenMutation.mutate();
                 }}
               >
-                {reopenMutation.isPending ? "Reopening..." : "Yes, reopen polling"}
+                {reopenMutation.isPending ? "Reopening…" : "Yes, reopen polling"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

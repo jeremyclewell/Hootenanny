@@ -1,24 +1,16 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Check, UtensilsCrossed, Drumstick, Leaf, Cake, GlassWater, Apple, MoreVertical, Pencil, Trash2, X } from "lucide-react";
+import { Check, UtensilsCrossed, MoreVertical, Pencil, Trash2, X } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { getCategory } from "@/lib/categories";
 import type { Item } from "@shared/schema";
 
 interface ItemCategoriesProps {
   items: Item[];
   eventId: string;
 }
-
-const categoryConfig: Record<string, { icon: React.ComponentType<{ className?: string }>; name: string }> = {
-  "main-dishes": { icon: Drumstick,   name: "Main dishes" },
-  "sides":       { icon: Leaf,        name: "Sides & salads" },
-  "appetizers":  { icon: Apple,       name: "Appetizers" },
-  "desserts":    { icon: Cake,        name: "Desserts" },
-  "beverages":   { icon: GlassWater,  name: "Beverages" },
-};
 
 /** First-name + last-initial helper for "Anya P. is bringing this" style. */
 function shortName(name: string) {
@@ -122,7 +114,7 @@ export default function ItemCategories({ items, eventId }: ItemCategoriesProps) 
   const hiddenCount = totalCategories - visibleEntries.length;
 
   const renderSection = (category: string, categoryItems: Item[]) => {
-    const cfg = categoryConfig[category] ?? { icon: UtensilsCrossed, name: category };
+    const cfg = getCategory(category);
     const CategoryIcon = cfg.icon;
     const claimed = categoryItems.filter((i) => i.claimedBy).length;
     const open = categoryItems.length - claimed;

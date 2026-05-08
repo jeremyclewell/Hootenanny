@@ -13,7 +13,9 @@ export interface IStorage {
 
   // Item operations
   getEventItems(eventId: string): Promise<Item[]>;
+  getItem(itemId: number): Promise<Item | undefined>;
   addItem(item: InsertItem): Promise<Item>;
+  addItems(items: InsertItem[]): Promise<Item[]>;
   claimItem(itemId: number, claimedBy: string, claimedByEmail?: string): Promise<Item | undefined>;
   unclaimItem(itemId: number): Promise<Item | undefined>;
   updateItem(itemId: number, updates: EditItem): Promise<Item | undefined>;
@@ -118,6 +120,11 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(items).where(eq(items.eventId, eventId));
   }
 
+  async getItem(itemId: number): Promise<Item | undefined> {
+    const [item] = await db.select().from(items).where(eq(items.id, itemId));
+    return item || undefined;
+  }
+
   async addItem(insertItem: InsertItem): Promise<Item> {
     const [item] = await db
       .insert(items)
@@ -129,6 +136,21 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return item;
+  }
+
+  async addItems(inserts: InsertItem[]): Promise<Item[]> {
+    if (inserts.length === 0) return [];
+    return await db
+      .insert(items)
+      .values(
+        inserts.map((i) => ({
+          ...i,
+          isCustom: i.isCustom ?? false,
+          claimedBy: i.claimedBy || null,
+          claimedByEmail: i.claimedByEmail || null,
+        })),
+      )
+      .returning();
   }
 
   async claimItem(itemId: number, claimedBy: string, claimedByEmail?: string): Promise<Item | undefined> {

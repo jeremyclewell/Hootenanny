@@ -18,12 +18,10 @@ import EventOverview from "@/components/event-overview";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, CalendarCheck } from "lucide-react";
-import { format, parseISO } from "date-fns";
-import type { Event, Item, Rsvp, DateVote } from "@shared/schema";
+import { AlertCircle } from "lucide-react";
+import type { Event, Item, Rsvp } from "@shared/schema";
 
 type PublicRsvp = Omit<Rsvp, "guestEmail">;
-type PublicVote = Omit<DateVote, "voterEmail">;
 
 interface EventStats {
   total: number;
@@ -55,7 +53,6 @@ export default function EventPage() {
 
   const isPolling = eventQuery.data?.pollStatus === "polling";
   const isHost = !!hostToken;
-  const hasCandidateDates = (eventQuery.data?.candidateDates?.length ?? 0) > 0;
 
   const itemsQuery = useQuery<Item[]>({
     queryKey: [`/api/events/${id}/items`],
@@ -70,11 +67,6 @@ export default function EventPage() {
   const rsvpsQuery = useQuery<PublicRsvp[]>({
     queryKey: [`/api/events/${id}/rsvps`],
     enabled: !!id && !isPolling,
-  });
-
-  const votesQuery = useQuery<PublicVote[]>({
-    queryKey: [`/api/events/${id}/votes`],
-    enabled: !!id && hasCandidateDates,
   });
 
   useEffect(() => {
@@ -145,7 +137,6 @@ export default function EventPage() {
   const items = itemsQuery.data || [];
   const stats = statsQuery.data || { total: 0, claimed: 0, available: 0, custom: 0 };
   const rsvps = rsvpsQuery.data || [];
-  const votes = votesQuery.data || [];
   const rsvpStats = {
     going: rsvps.filter((r) => r.response === "yes").length,
     maybe: rsvps.filter((r) => r.response === "maybe").length,
@@ -183,12 +174,7 @@ export default function EventPage() {
             <ReopenPollBanner event={event} hostToken={hostToken} />
           )}
 
-          <QuickStats
-            stats={stats}
-            rsvpStats={rsvpStats}
-            voteCount={votes.length}
-            showVotes={false}
-          />
+          <QuickStats stats={stats} rsvpStats={rsvpStats} />
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="flex justify-center mb-6">
@@ -222,7 +208,6 @@ export default function EventPage() {
                 event={event}
                 items={items}
                 stats={stats}
-                onViewDates={() => {}}
                 onViewPotluck={() => setActiveTab("potluck")}
               />
             </TabsContent>
