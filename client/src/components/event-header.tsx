@@ -8,7 +8,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Utensils, MapPin, Users, Calendar, CalendarPlus, Download, MailCheck, Clock, Hourglass } from "lucide-react";
 import type { Event } from "@shared/schema";
-import { buildGoogleCalendarUrl, downloadIcsFile } from "@/lib/calendar";
+import { buildGoogleCalendarUrl, downloadIcsFile, parseLocalDate } from "@/lib/calendar";
 import { SiGooglecalendar } from "react-icons/si";
 import RsvpDialog from "@/components/rsvp-dialog";
 import { formatDuration } from "@/lib/duration";
@@ -16,11 +16,6 @@ import { format } from "date-fns";
 
 interface EventHeaderProps {
   event: Event;
-}
-
-function parseLocalDate(dateStr: string): Date {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y, m - 1, d);
 }
 
 function formatTime(time: string) {
