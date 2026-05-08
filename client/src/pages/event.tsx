@@ -92,11 +92,13 @@ export default function EventPage() {
   if (eventQuery.error || !eventQuery.data) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-background">
-        <Card className="w-full max-w-md mx-4 shadow-warm border-border">
+        <Card className="w-full max-w-md mx-4 surface-card">
           <CardContent className="pt-6">
-            <div className="flex mb-4 gap-3">
-              <AlertCircle className="h-8 w-8 text-destructive shrink-0" />
-              <h1 className="text-2xl font-serif font-bold text-foreground">Event Not Found</h1>
+            <div className="flex mb-4 gap-3 items-center">
+              <span className="icon-chip-md bg-terracotta-50">
+                <AlertCircle className="h-5 w-5 text-destructive" />
+              </span>
+              <h1 className="text-2xl font-serif font-bold text-foreground">Event not found</h1>
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
               The hootenanny event you're looking for doesn't exist or has been removed.

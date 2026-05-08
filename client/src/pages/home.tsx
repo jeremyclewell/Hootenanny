@@ -88,7 +88,7 @@ export default function Home() {
             {/* Card 1: Event card (top, larger) */}
             <div className="absolute top-0 left-[8%] w-[360px] bg-card rounded-2xl border border-border shadow-warm-lg p-5 z-20 rotate-2 hover:scale-110 hover:rotate-3 hover:z-30 transition-all duration-200 ease-in-out cursor-default">
               {/* RSVP badge */}
-              <div className="absolute -top-3 right-4 bg-sage-700 text-white text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">
+              <div className="absolute -top-3 right-4 bg-sage-600 text-white text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">
                 RSVP'D <span>✓</span>
               </div>
               {/* Card header */}

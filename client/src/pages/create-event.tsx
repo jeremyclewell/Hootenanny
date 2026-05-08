@@ -129,7 +129,7 @@ export default function CreateEvent() {
           <p className="text-muted-foreground">Set up your hootenanny with a theme and share with guests.</p>
         </div>
 
-        <Card className="shadow-warm border-border">
+        <Card className="surface-card">
           <CardContent className="pt-6">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -440,7 +440,7 @@ export default function CreateEvent() {
 
                 <Button
                   type="submit"
-                  className="w-full bg-primary hover:bg-primary/90 text-base py-5"
+                  className="w-full bg-primary hover:bg-primary/90 rounded-full h-12 text-base font-medium shadow-sm"
                   disabled={createEventMutation.isPending}
                 >
                   <PartyPopper className="mr-2 h-5 w-5" />

@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { editItemSchema, type EditItem, type Item } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { CATEGORIES } from "@/lib/categories";
+import { Pencil } from "lucide-react";
 
 export default function EditItemModal() {
   const [isOpen, setIsOpen] = useState(false);
@@ -69,7 +70,7 @@ export default function EditItemModal() {
     },
     onSuccess: (item) => {
       setIsOpen(false);
-      toast({ title: "Item Updated", description: `"${item.name}" has been updated.` });
+      toast({ title: "Item updated", description: `"${item.name}" has been updated.` });
     },
     onSettled: (item) => {
       if (item) {
@@ -94,10 +95,19 @@ export default function EditItemModal() {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit Item</DialogTitle>
-          <DialogDescription>
-            Update the item name and category. Only unclaimed items can be edited.
-          </DialogDescription>
+          <div className="flex items-start gap-3 pr-12">
+            <span className="icon-chip-md bg-terracotta-100">
+              <Pencil className="h-5 w-5 text-primary" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <DialogTitle className="font-serif text-2xl font-bold text-foreground leading-tight">
+                Edit item
+              </DialogTitle>
+              <DialogDescription className="mt-1.5 text-sm text-muted-foreground">
+                Update the item name and category. Only unclaimed items can be edited.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -106,9 +116,9 @@ export default function EditItemModal() {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Item Name</FormLabel>
+                  <FormLabel className="text-sm font-semibold text-foreground">Item name</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. Caesar Salad" {...field} />
+                    <Input placeholder="e.g. Caesar salad" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -119,7 +129,7 @@ export default function EditItemModal() {
               name="category"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Category</FormLabel>
+                  <FormLabel className="text-sm font-semibold text-foreground">Category</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
@@ -136,18 +146,22 @@ export default function EditItemModal() {
                 </FormItem>
               )}
             />
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={editItemMutation.isPending}
-                className="bg-primary hover:bg-primary/90"
-              >
-                {editItemMutation.isPending ? "Updating…" : "Update Item"}
-              </Button>
-            </div>
+            <Button
+              type="submit"
+              disabled={editItemMutation.isPending}
+              className="w-full bg-primary hover:bg-primary/90 rounded-full h-12 text-base font-medium shadow-sm"
+            >
+              {editItemMutation.isPending ? "Updating…" : "Update item"}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="w-full justify-center text-muted-foreground"
+              onClick={() => setIsOpen(false)}
+            >
+              Cancel
+            </Button>
           </form>
         </Form>
       </DialogContent>

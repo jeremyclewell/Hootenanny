@@ -73,10 +73,12 @@ export default function RsvpList({ eventId, isHost, hostToken }: RsvpListProps) 
   if (rsvpsQuery.isLoading) return <Skeleton className="mb-8 h-48 w-full" />;
 
   return (
-    <Card className="mb-8 shadow-warm border-border">
+    <Card className="mb-8 surface-card">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 font-serif">
-          <UserCheck className="h-5 w-5 text-primary" />
+        <CardTitle className="flex items-center gap-3 font-serif text-xl">
+          <span className="icon-chip-sm bg-terracotta-50">
+            <UserCheck className="h-4 w-4 text-primary" />
+          </span>
           Who's coming
         </CardTitle>
         <CardDescription>

@@ -75,10 +75,12 @@ export default function AddCustomItem({ eventId }: AddCustomItemProps) {
   });
 
   return (
-    <div className="bg-card rounded-2xl border border-border shadow-warm p-6 mb-6">
-      <div className="flex items-center gap-2 mb-4">
-        <PlusCircle className="h-5 w-5 text-primary" />
-        <h3 className="text-base font-serif font-semibold text-foreground">Add a Custom Item</h3>
+    <div className="surface-card p-6 mb-6">
+      <div className="flex items-center gap-3 mb-4">
+        <span className="icon-chip-sm bg-terracotta-50">
+          <PlusCircle className="h-4 w-4 text-primary" />
+        </span>
+        <h3 className="text-lg font-serif font-semibold text-foreground">Add a custom item</h3>
       </div>
       <Form {...form}>
         <form
@@ -124,7 +126,7 @@ export default function AddCustomItem({ eventId }: AddCustomItemProps) {
           </div>
           <Button
             type="submit"
-            className="bg-primary hover:bg-primary/90"
+            className="bg-primary hover:bg-primary/90 rounded-full shadow-sm"
             disabled={addItemMutation.isPending}
           >
             <Plus className="mr-2 h-4 w-4" />

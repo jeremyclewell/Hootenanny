@@ -102,7 +102,7 @@ export default function EventHeader({ event }: EventHeaderProps) {
               {event.date && event.pollStatus !== "polling" && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" data-testid="button-add-to-calendar">
+                    <Button variant="outline" size="sm" className="rounded-full" data-testid="button-add-to-calendar">
                       <CalendarPlus className="mr-2 h-4 w-4" />
                       <span className="hidden sm:inline">Add to calendar</span>
                     </Button>
@@ -137,14 +137,14 @@ export default function EventHeader({ event }: EventHeaderProps) {
                 <RsvpDialog
                   eventId={event.id}
                   trigger={
-                    <Button variant="outline" size="sm" data-testid="button-rsvp">
+                    <Button variant="outline" size="sm" className="rounded-full" data-testid="button-rsvp">
                       <MailCheck className="mr-2 h-4 w-4" />
                       RSVP
                     </Button>
                   }
                 />
               )}
-              <Button onClick={handleShare} size="sm" className="bg-primary hover:bg-primary/90 shadow-sm">
+              <Button onClick={handleShare} size="sm" className="bg-primary hover:bg-primary/90 rounded-full shadow-sm">
                 <Upload className="mr-2 h-4 w-4" />
                 Share
               </Button>
@@ -155,7 +155,7 @@ export default function EventHeader({ event }: EventHeaderProps) {
 
       {/* Event info card */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-        <div className="relative bg-card rounded-2xl border border-border shadow-warm p-7 sm:p-8 mb-6 overflow-hidden">
+        <div className="relative surface-card p-7 sm:p-8 mb-6 overflow-hidden">
           {/* Asterisk decoration */}
           <span className="absolute top-5 right-6 text-2xl text-muted-foreground/30 select-none pointer-events-none" aria-hidden>✦</span>
 
@@ -234,9 +234,9 @@ function DetailCell({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <div className="w-7 h-7 rounded-md bg-sand-100 flex items-center justify-center shrink-0 mt-0.5">
-        <Icon className="h-3.5 w-3.5 text-foreground/70" />
-      </div>
+      <span className="w-8 h-8 rounded-lg bg-sand-100 flex items-center justify-center shrink-0 mt-0.5">
+        <Icon className="h-4 w-4 text-foreground/70" />
+      </span>
       <div className="min-w-0">
         <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
         <p className="text-sm font-semibold text-foreground leading-snug">{value}</p>

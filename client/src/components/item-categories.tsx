@@ -120,13 +120,13 @@ export default function ItemCategories({ items, eventId }: ItemCategoriesProps) 
     const open = categoryItems.length - claimed;
 
     return (
-      <div key={category} className="bg-terracotta-50 rounded-2xl p-2.5 shadow-warm" data-testid={`category-${category}`}>
+      <div key={category} className="surface-callout border-terracotta-100 bg-terracotta-50 p-2.5" data-testid={`category-${category}`}>
         {/* Category header */}
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-card flex items-center justify-center shadow-sm">
+            <span className="icon-chip-sm bg-card shadow-sm">
               <CategoryIcon className="h-4 w-4 text-primary" />
-            </div>
+            </span>
             <h3 className="font-serif font-semibold text-foreground text-lg">{cfg.name}</h3>
             <span className="inline-flex items-center justify-center min-w-[22px] h-[22px] rounded-full bg-terracotta-100 px-1.5 text-xs font-semibold text-primary">
               {categoryItems.length}
@@ -153,14 +153,12 @@ export default function ItemCategories({ items, eventId }: ItemCategoriesProps) 
                 data-testid={`item-${item.id}`}
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                    claimed ? "bg-sage-100" : "bg-terracotta-50"
-                  }`}>
+                  <span className={`icon-chip-sm ${claimed ? "bg-sage-100" : "bg-terracotta-50"}`}>
                     {claimed
-                      ? <Check className="h-4 w-4 text-sage-700" />
+                      ? <Check className="h-4 w-4 text-sage-600" />
                       : <UtensilsCrossed className="h-4 w-4 text-primary" />
                     }
-                  </div>
+                  </span>
                   <div className="min-w-0 flex-1">
                     <p className={`font-medium text-foreground leading-tight ${claimed ? "line-through text-muted-foreground" : ""}`}>
                       {item.name}
@@ -179,7 +177,7 @@ export default function ItemCategories({ items, eventId }: ItemCategoriesProps) 
                     <Button
                       size="sm"
                       onClick={() => handleClaimItem(item)}
-                      className="bg-primary hover:bg-primary/90 rounded-full px-4 h-8 text-xs"
+                      className="bg-primary hover:bg-primary/90 rounded-full px-4 h-8 text-xs shadow-sm"
                       data-testid={`button-claim-${item.id}`}
                     >
                       Claim

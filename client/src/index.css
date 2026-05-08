@@ -104,3 +104,38 @@
 .shadow-warm-lg {
   box-shadow: 0 4px 8px rgba(60, 30, 10, 0.10), 0 16px 32px rgba(60, 30, 10, 0.10);
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Design recipes — keep visual treatment consistent across the app.
+   Use these helpers instead of ad-hoc combos of rounded-*, shadow-*, padding.
+
+   Primary card surface (white card on cream page):
+     .surface-card    → bg-card border border-border rounded-2xl shadow-warm
+
+   Tinted callout (soft brand-tinted card; pair with brand bg/border classes):
+     .surface-callout → border rounded-2xl
+
+   Icon chips (colored squares behind a lucide icon):
+     .icon-chip-sm    → 36×36, rounded-lg   (use inside list rows / detail cells)
+     .icon-chip-md    → 44×44, rounded-xl   (use in card / dialog headers)
+
+   Buttons: primary CTAs and secondary/outline buttons all use rounded-full.
+   Headings: page H1 = font-serif font-bold text-3xl sm:text-4xl
+             card / dialog title = font-serif font-semibold text-lg–2xl
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.surface-card {
+  @apply bg-card border border-border rounded-2xl shadow-warm;
+}
+
+.surface-callout {
+  @apply border rounded-2xl;
+}
+
+.icon-chip-sm {
+  @apply w-9 h-9 rounded-lg flex items-center justify-center shrink-0;
+}
+
+.icon-chip-md {
+  @apply w-11 h-11 rounded-xl flex items-center justify-center shrink-0;
+}

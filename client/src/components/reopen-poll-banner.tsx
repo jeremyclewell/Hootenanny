@@ -64,10 +64,12 @@ export default function ReopenPollBanner({ event, hostToken }: ReopenPollBannerP
   });
 
   return (
-    <Card className="mb-6 border-sand-200 bg-sand-100">
+    <Card className="mb-6 surface-callout border-sand-200 bg-sand-100 shadow-none">
       <CardContent className="flex flex-wrap items-start justify-between gap-3 pt-6">
         <div className="flex items-start gap-3">
-          <CalendarRange className="mt-1 h-5 w-5 text-sand-600" />
+          <span className="icon-chip-sm bg-card shadow-sm">
+            <CalendarRange className="h-4 w-4 text-sand-600" />
+          </span>
           <div>
             <p className="font-serif font-semibold text-foreground">Plans changed?</p>
             <p className="text-sm text-muted-foreground">
@@ -78,7 +80,7 @@ export default function ReopenPollBanner({ event, hostToken }: ReopenPollBannerP
         </div>
         <AlertDialog open={open} onOpenChange={setOpen}>
           <AlertDialogTrigger asChild>
-            <Button size="sm" variant="outline" data-testid="button-reopen-poll">
+            <Button size="sm" variant="outline" className="rounded-full" data-testid="button-reopen-poll">
               <RotateCcw className="mr-2 h-4 w-4" />
               Reopen polling
             </Button>

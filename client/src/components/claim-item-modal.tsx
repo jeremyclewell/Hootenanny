@@ -3,7 +3,6 @@ import { useMutation } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,7 +10,7 @@ import { claimItemSchema, type ClaimItem, type Item } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { getCategory } from "@/lib/categories";
-import { UtensilsCrossed } from "lucide-react";
+import { UtensilsCrossed, Hand } from "lucide-react";
 
 export default function ClaimItemModal() {
   const [isOpen, setIsOpen] = useState(false);
@@ -26,11 +25,10 @@ export default function ClaimItemModal() {
     },
   });
 
-  // Load saved user data from localStorage
   useEffect(() => {
     const savedName = localStorage.getItem('potluck-user-name');
     const savedEmail = localStorage.getItem('potluck-user-email');
-    
+
     if (savedName || savedEmail) {
       form.reset({
         name: savedName || "",
@@ -47,19 +45,16 @@ export default function ClaimItemModal() {
     },
     onMutate: async (data: ClaimItem) => {
       if (!selectedItem) return;
-      
-      // Cancel any outgoing refetches
+
       await queryClient.cancelQueries({ queryKey: [`/api/events/${selectedItem.eventId}/items`] });
       await queryClient.cancelQueries({ queryKey: [`/api/events/${selectedItem.eventId}/stats`] });
 
-      // Snapshot the previous value
       const previousItems = queryClient.getQueryData([`/api/events/${selectedItem.eventId}/items`]);
       const previousStats = queryClient.getQueryData([`/api/events/${selectedItem.eventId}/stats`]);
 
-      // Optimistically update the item as claimed
-      queryClient.setQueryData([`/api/events/${selectedItem.eventId}/items`], (old: any) => 
-        old ? old.map((item: any) => 
-          item.id === selectedItem.id 
+      queryClient.setQueryData([`/api/events/${selectedItem.eventId}/items`], (old: any) =>
+        old ? old.map((item: any) =>
+          item.id === selectedItem.id
             ? { ...item, claimedBy: data.name, claimedByEmail: data.email, claimedAt: new Date() }
             : item
         ) : []
@@ -69,7 +64,6 @@ export default function ClaimItemModal() {
     },
     onError: (error: any, data, context) => {
       if (context && selectedItem) {
-        // Roll back on error
         queryClient.setQueryData([`/api/events/${selectedItem.eventId}/items`], context.previousItems);
         queryClient.setQueryData([`/api/events/${selectedItem.eventId}/stats`], context.previousStats);
       }
@@ -82,21 +76,18 @@ export default function ClaimItemModal() {
     onSuccess: (item) => {
       setIsOpen(false);
       toast({
-        title: "Item Claimed Successfully!",
+        title: "Item claimed!",
         description: `You've claimed "${item.name}"`,
       });
     },
     onSettled: (item) => {
       if (item) {
-        // Always refetch to ensure correct data
         queryClient.invalidateQueries({ queryKey: [`/api/events/${item.eventId}/items`] });
         queryClient.invalidateQueries({ queryKey: [`/api/events/${item.eventId}/stats`] });
       }
     },
   });
 
-  // Hold the latest mutation/form refs so the window-listener effect can
-  // run once and still see fresh values without re-binding every render.
   const mutationRef = useRef(claimItemMutation);
   const formRef = useRef(form);
   useEffect(() => { mutationRef.current = claimItemMutation; }, [claimItemMutation]);
@@ -128,12 +119,10 @@ export default function ClaimItemModal() {
   }, []);
 
   const onSubmit = (data: ClaimItem) => {
-    // Save user data to localStorage for future use
     localStorage.setItem('potluck-user-name', data.name);
     if (data.email) {
       localStorage.setItem('potluck-user-email', data.email);
     }
-    
     claimItemMutation.mutate(data);
   };
 
@@ -146,25 +135,32 @@ export default function ClaimItemModal() {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Claim Item</DialogTitle>
-          <DialogDescription>
-            Enter your name and email to claim this item for the event.
-          </DialogDescription>
+          <div className="flex items-start gap-3 pr-12">
+            <span className="icon-chip-md bg-terracotta-100">
+              <Hand className="h-5 w-5 text-primary" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <DialogTitle className="font-serif text-2xl font-bold text-foreground leading-tight">
+                Claim this item
+              </DialogTitle>
+              <DialogDescription className="mt-1.5 text-sm text-muted-foreground">
+                Add your name so the host knows what you're bringing.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
-        
+
         {selectedItem && (
           <>
-            <div className="mb-4">
-              <div className="flex items-center gap-3 p-3 bg-sand-100 rounded-xl border border-border">
-                <div className="w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center shrink-0">
-                  <UtensilsCrossed className="h-5 w-5" />
-                </div>
-                <div>
-                  <h4 className="font-medium text-foreground">{selectedItem.name}</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {getCategory(selectedItem.category).name}
-                  </p>
-                </div>
+            <div className="surface-callout border-sand-200 bg-sand-100 flex items-center gap-3 p-3">
+              <span className="icon-chip-sm bg-card shadow-sm">
+                <UtensilsCrossed className="h-4 w-4 text-primary" />
+              </span>
+              <div>
+                <h4 className="font-semibold text-foreground leading-tight">{selectedItem.name}</h4>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {getCategory(selectedItem.category).name}
+                </p>
               </div>
             </div>
 
@@ -175,9 +171,9 @@ export default function ClaimItemModal() {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Your Name</FormLabel>
+                      <FormLabel className="text-sm font-semibold text-foreground">Your name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter your full name" {...field} />
+                        <Input placeholder="Alex Smith" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -189,40 +185,40 @@ export default function ClaimItemModal() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email (Optional)</FormLabel>
+                      <FormLabel className="text-sm font-semibold text-foreground">
+                        Email <span className="font-normal text-muted-foreground">(optional)</span>
+                      </FormLabel>
                       <FormControl>
-                        <Input 
-                          type="email" 
-                          placeholder="your.email@example.com" 
-                          {...field} 
+                        <Input
+                          type="email"
+                          placeholder="alex@example.com"
+                          {...field}
                         />
                       </FormControl>
-                      <FormDescription>
-                        For event updates and reminders
-                      </FormDescription>
+                      <FormDescription>For event updates and reminders.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                <div className="flex space-x-3 pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="flex-1"
-                    onClick={handleClose}
-                    disabled={claimItemMutation.isPending}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="flex-1 bg-primary hover:bg-primary/90"
-                    disabled={claimItemMutation.isPending}
-                  >
-                    {claimItemMutation.isPending ? "Claiming…" : "Claim Item"}
-                  </Button>
-                </div>
+                <Button
+                  type="submit"
+                  className="w-full bg-primary hover:bg-primary/90 rounded-full h-12 text-base font-medium shadow-sm"
+                  disabled={claimItemMutation.isPending}
+                >
+                  {claimItemMutation.isPending ? "Claiming…" : "Claim it"}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-center text-muted-foreground"
+                  onClick={handleClose}
+                  disabled={claimItemMutation.isPending}
+                >
+                  Cancel
+                </Button>
               </form>
             </Form>
           </>

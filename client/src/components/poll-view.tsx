@@ -145,8 +145,10 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
   return (
     <div className="space-y-6">
       {/* Status banner */}
-      <div className="flex items-start gap-3 rounded-2xl border border-teal-100 bg-teal-50 p-5 shadow-warm">
-        <CalendarCheck className="mt-0.5 h-5 w-5 shrink-0 text-teal-500" />
+      <div className="flex items-start gap-3 surface-callout border-teal-100 bg-teal-50 p-5">
+        <span className="icon-chip-sm bg-card shadow-sm">
+          <CalendarCheck className="h-4 w-4 text-teal-500" />
+        </span>
         <div>
           <p className="font-serif font-semibold text-foreground">Picking a date together</p>
           <p className="text-sm text-muted-foreground mt-1">
@@ -159,9 +161,9 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
 
       {/* Voter form */}
       {!isHost && (
-        <Card className="shadow-warm border-border">
+        <Card className="surface-card">
           <CardHeader>
-            <CardTitle className="font-serif">Mark your availability</CardTitle>
+            <CardTitle className="font-serif text-xl">Mark your availability</CardTitle>
             <CardDescription>
               Tap every date that could work for you. You can come back and update anytime.
             </CardDescription>
@@ -218,7 +220,7 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
                 })}
               </div>
 
-              <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={submitVote.isPending}>
+              <Button type="submit" className="w-full bg-primary hover:bg-primary/90 rounded-full h-12 text-base font-medium shadow-sm" disabled={submitVote.isPending}>
                 <CheckCircle2 className="mr-2 h-4 w-4" />
                 {submitVote.isPending ? "Saving…" : "Save my availability"}
               </Button>
@@ -228,12 +230,16 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
       )}
 
       {/* Tally / host panel */}
-      <Card className="shadow-warm border-border">
+      <Card className="surface-card">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2 font-serif">
-                {isHost && <Crown className="h-5 w-5 text-sand-400" />}
+              <CardTitle className="flex items-center gap-3 font-serif text-xl">
+                <span className="icon-chip-sm bg-sand-100">
+                  {isHost
+                    ? <Crown className="h-4 w-4 text-sand-600" />
+                    : <Users className="h-4 w-4 text-sand-600" />}
+                </span>
                 Results so far
               </CardTitle>
               <CardDescription className="flex items-center gap-1.5">
@@ -246,7 +252,7 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
         <CardContent className="space-y-3">
           {/* Host-only controls */}
           {isHost && (
-            <div className="space-y-3 rounded-xl border border-sand-200 bg-sand-100 p-4">
+            <div className="space-y-3 surface-callout border-sand-200 bg-sand-100 p-4">
               <div className="flex flex-wrap items-end gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="finalize-time" className="flex items-center gap-2 text-sm">
@@ -314,7 +320,7 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
                       </Button>
                       <Button
                         size="sm"
-                        className="bg-primary hover:bg-primary/90"
+                        className="bg-primary hover:bg-primary/90 rounded-full"
                         disabled={extraDates.length === 0 || addDatesMutation.isPending}
                         onClick={() => {
                           const iso = extraDates
@@ -345,7 +351,7 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
             return (
               <div
                 key={row.date}
-                className={`rounded-xl border p-4 transition-all ${
+                className={`surface-callout p-4 transition-all ${
                   isLeader
                     ? "border-sand-200 bg-sand-100"
                     : "border-border bg-card"
@@ -353,7 +359,7 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    {isLeader && <Trophy className="h-4 w-4 text-sand-400" />}
+                    {isLeader && <Trophy className="h-4 w-4 text-sand-600" />}
                     <div>
                       <p className="font-semibold text-foreground">
                         {format(parseISO(row.date), "EEEE, MMM d, yyyy")}
@@ -369,7 +375,7 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
                       size="sm"
                       onClick={() => finalizeMutation.mutate(row.date)}
                       disabled={finalizeMutation.isPending}
-                      className={isLeader ? "bg-primary hover:bg-primary/90" : ""}
+                      className={`rounded-full ${isLeader ? "bg-primary hover:bg-primary/90 shadow-sm" : ""}`}
                       variant={isLeader ? "default" : "outline"}
                     >
                       Finalize this date
@@ -379,7 +385,7 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
                 {totalVoters > 0 && (
                   <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
                     <div
-                      className={`h-full rounded-full transition-all ${isLeader ? "bg-sand-400" : "bg-teal-400"}`}
+                      className={`h-full rounded-full transition-all ${isLeader ? "bg-primary" : "bg-sand-400"}`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>
