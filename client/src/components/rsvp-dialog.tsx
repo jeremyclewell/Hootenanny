@@ -53,7 +53,7 @@ const RESPONSE_OPTIONS: Array<{
     icon: Check,
     defaultIconBg: "bg-sage-100",
     defaultIconColor: "text-sage-600",
-    selectedIconBg: "bg-sage-500 text-white",
+    selectedIconBg: "bg-sage-600 text-white",
     selectedBorder: "border-sage-400",
     selectedBg: "bg-sage-50",
   },
@@ -267,7 +267,7 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
                       "relative flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all disabled:opacity-60",
                       isSelected
                         ? `${opt.selectedBorder} ${opt.selectedBg}`
-                        : "border-border/60 bg-card hover:border-sand-300"
+                        : "border-border/60 bg-card hover:border-sand-400"
                     )}
                   >
                     <span className={cn(

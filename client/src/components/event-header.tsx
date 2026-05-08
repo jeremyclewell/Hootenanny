@@ -41,9 +41,9 @@ function calcEndTime(time: string, durationMinutes: number): string {
 function ThemeDisc() {
   return (
     <div className="w-20 h-20 rounded-2xl bg-terracotta-50 border border-terracotta-100 flex items-center justify-center shrink-0">
-      <div className="relative w-12 h-12 rounded-full border-2 border-terracotta-200">
-        <div className="absolute inset-1.5 rounded-full border border-terracotta-200" />
-        <div className="absolute inset-3.5 rounded-full border border-terracotta-300" />
+      <div className="relative w-12 h-12 rounded-full border-2 border-terracotta-100">
+        <div className="absolute inset-1.5 rounded-full border border-terracotta-100" />
+        <div className="absolute inset-3.5 rounded-full border border-terracotta-400" />
         <div className="absolute left-1/2 top-1/2 w-1.5 h-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary" />
       </div>
     </div>

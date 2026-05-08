@@ -353,7 +353,7 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
                 key={row.date}
                 className={`surface-callout p-4 transition-all ${
                   isLeader
-                    ? "border-sage-200 bg-sage-50"
+                    ? "border-sage-100 bg-sage-50"
                     : "border-border bg-card"
                 }`}
               >
@@ -385,7 +385,7 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
                 {totalVoters > 0 && (
                   <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
                     <div
-                      className={`h-full rounded-full transition-all ${isLeader ? "bg-sage-500" : "bg-sand-400"}`}
+                      className={`h-full rounded-full transition-all ${isLeader ? "bg-sage-600" : "bg-sand-400"}`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>

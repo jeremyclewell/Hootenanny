@@ -58,7 +58,7 @@ export default function EventOverview({ event, items, stats, onViewPotluck }: Ev
                 <div
                   key={row.date}
                   className={`text-left surface-callout p-3 ${
-                    isLeader ? "border-sage-200 bg-sage-50" : "border-border bg-card"
+                    isLeader ? "border-sage-100 bg-sage-50" : "border-border bg-card"
                   }`}
                 >
                   <div className="flex items-start gap-3 mb-2">
@@ -74,7 +74,7 @@ export default function EventOverview({ event, items, stats, onViewPotluck }: Ev
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <p className="font-semibold text-foreground text-sm">{format(date, "EEEE")}</p>
                         {isLeader && totalVoters > 0 && (
-                          <span className="inline-flex items-center rounded-full bg-sage-100 border border-sage-200 px-1.5 py-0.5 text-[10px] font-semibold text-sage-700 uppercase tracking-wide">
+                          <span className="inline-flex items-center rounded-full bg-sage-100 border border-sage-100 px-1.5 py-0.5 text-[10px] font-semibold text-sage-700 uppercase tracking-wide">
                             Top pick
                           </span>
                         )}
@@ -87,7 +87,7 @@ export default function EventOverview({ event, items, stats, onViewPotluck }: Ev
                   </div>
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                     <div
-                      className={`h-full rounded-full transition-all ${isLeader ? "bg-sage-500" : "bg-sand-400"}`}
+                      className={`h-full rounded-full transition-all ${isLeader ? "bg-sage-600" : "bg-sand-400"}`}
                       style={{ width: `${row.pct}%` }}
                     />
                   </div>

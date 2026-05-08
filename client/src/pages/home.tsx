@@ -94,7 +94,7 @@ export default function Home() {
               {/* Card header */}
               <div className="flex items-start gap-3">
                 <div className="w-12 h-12 rounded-xl bg-teal-50 border-2 border-teal-100 flex items-center justify-center shrink-0">
-                  <div className="w-6 h-6 rounded-full border-2 border-teal-300" />
+                  <div className="w-6 h-6 rounded-full border-2 border-teal-400" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-foreground text-sm leading-tight">Sunday Garden Picnic</p>
