@@ -1,4 +1,4 @@
-import { CheckCircle, List, UserCheck, HelpCircle, Calendar } from "lucide-react";
+import { CheckCircle, List, UserCheck, HelpCircle } from "lucide-react";
 
 interface QuickStatsProps {
   stats: {
@@ -11,8 +11,6 @@ interface QuickStatsProps {
     going: number;
     maybe: number;
   };
-  voteCount?: number;
-  showVotes?: boolean;
 }
 
 interface Tile {
@@ -25,7 +23,7 @@ interface Tile {
   testId?: string;
 }
 
-export default function QuickStats({ stats, rsvpStats, voteCount = 0, showVotes = false }: QuickStatsProps) {
+export default function QuickStats({ stats, rsvpStats }: QuickStatsProps) {
   const tiles: Tile[] = [];
 
   if (rsvpStats) {
@@ -66,22 +64,10 @@ export default function QuickStats({ stats, rsvpStats, voteCount = 0, showVotes 
     value: stats.available,
   });
 
-  if (showVotes) {
-    tiles.push({
-      key: "votes",
-      icon: Calendar,
-      iconBg: "bg-terracotta-50",
-      iconColor: "text-primary",
-      label: "Date votes",
-      value: voteCount,
-    });
-  }
-
-  const cols = tiles.length;
   const gridClass =
-    cols === 5 ? "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6"
-    : cols === 4 ? "grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
-    : "grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6";
+    tiles.length === 4
+      ? "grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
+      : "grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6";
 
   return (
     <div className={gridClass}>
