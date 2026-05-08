@@ -126,8 +126,8 @@ export default function AddressAutocomplete({
               className={cn(
                 "flex items-start gap-2.5 px-3 py-2.5 cursor-pointer text-sm transition-colors",
                 i === activeIndex
-                  ? "bg-terracotta-50 text-primary"
-                  : "hover:bg-muted/60 text-foreground"
+                  ? "bg-accent text-accent-foreground"
+                  : "bg-card hover:bg-accent text-foreground"
               )}
             >
               <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0 text-muted-foreground" />

@@ -37,9 +37,11 @@ export default function EventOverview({ event, items, stats, onViewPotluck }: Ev
     <div className="space-y-4">
       {/* Vote-for-a-date preview */}
       {showPoll && (
-        <div className="bg-card rounded-2xl border border-border shadow-warm p-6">
-          <div className="flex items-center gap-2 mb-2">
-            <Calendar className="h-5 w-5 text-foreground/70" />
+        <div className="surface-card p-6">
+          <div className="flex items-center gap-3 mb-2">
+            <span className="icon-chip-sm bg-sand-100">
+              <Calendar className="h-4 w-4 text-sand-600" />
+            </span>
             <h3 className="text-lg font-serif font-semibold text-foreground">Vote for a date</h3>
             <span className="inline-flex items-center rounded-full bg-terracotta-50 border border-terracotta-100 px-2 py-0.5 text-xs font-medium text-primary">
               {totalVotes} {totalVotes === 1 ? "vote" : "votes"}
@@ -55,8 +57,8 @@ export default function EventOverview({ event, items, stats, onViewPotluck }: Ev
               return (
                 <div
                   key={row.date}
-                  className={`text-left rounded-xl border p-3 ${
-                    isLeader ? "border-primary/60 bg-terracotta-50/50 ring-1 ring-primary/30" : "border-border bg-card"
+                  className={`text-left surface-callout p-3 ${
+                    isLeader ? "border-sage-200 bg-sage-50" : "border-border bg-card"
                   }`}
                 >
                   <div className="flex items-start gap-3 mb-2">
@@ -72,7 +74,7 @@ export default function EventOverview({ event, items, stats, onViewPotluck }: Ev
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <p className="font-semibold text-foreground text-sm">{format(date, "EEEE")}</p>
                         {isLeader && totalVoters > 0 && (
-                          <span className="inline-flex items-center rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary uppercase tracking-wide">
+                          <span className="inline-flex items-center rounded-full bg-sage-100 border border-sage-200 px-1.5 py-0.5 text-[10px] font-semibold text-sage-700 uppercase tracking-wide">
                             Top pick
                           </span>
                         )}
@@ -85,7 +87,7 @@ export default function EventOverview({ event, items, stats, onViewPotluck }: Ev
                   </div>
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                     <div
-                      className={`h-full rounded-full transition-all ${isLeader ? "bg-primary" : "bg-sage-400"}`}
+                      className={`h-full rounded-full transition-all ${isLeader ? "bg-sage-500" : "bg-sand-400"}`}
                       style={{ width: `${row.pct}%` }}
                     />
                   </div>
@@ -105,12 +107,14 @@ export default function EventOverview({ event, items, stats, onViewPotluck }: Ev
       {stats.total > 0 && (
         <button
           onClick={onViewPotluck}
-          className="w-full text-left bg-card rounded-2xl border border-border shadow-warm p-6 hover:border-primary/30 transition-all"
+          className="w-full text-left surface-card p-6 hover:border-primary/30 transition-all"
           data-testid="overview-view-potluck"
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <AlignLeft className="h-5 w-5 text-foreground/70" />
+            <div className="flex items-center gap-3">
+              <span className="icon-chip-sm bg-terracotta-50">
+                <AlignLeft className="h-4 w-4 text-primary" />
+              </span>
               <h3 className="text-lg font-serif font-semibold text-foreground">Potluck list</h3>
             </div>
             <p className="text-sm text-muted-foreground">
@@ -119,7 +123,7 @@ export default function EventOverview({ event, items, stats, onViewPotluck }: Ev
           </div>
           <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-primary to-sage-400 transition-all"
+              className="h-full rounded-full bg-primary transition-all"
               style={{ width: `${claimPct}%` }}
             />
           </div>
