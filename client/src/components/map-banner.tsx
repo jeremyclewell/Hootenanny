@@ -70,10 +70,13 @@ export default function MapBackground({ location }: MapBackgroundProps) {
         { maxZoom: 20, subdomains: "abcd" }
       ).addTo(map);
 
+      const primary = getComputedStyle(document.documentElement)
+        .getPropertyValue("--primary")
+        .trim() || "hsl(14, 56%, 51%)";
       const dot = L.divIcon({
         html: `<div style="
           width:18px; height:18px;
-          background: hsl(14, 56%, 51%);
+          background: ${primary};
           border: 3px solid white;
           border-radius: 50%;
           box-shadow: 0 2px 10px rgba(0,0,0,0.40);
@@ -159,18 +162,12 @@ export default function MapBackground({ location }: MapBackgroundProps) {
       {/* Loading shimmer */}
       {!ready && (
         <div
-          className="absolute inset-0 animate-pulse"
-          style={{
-            background: `linear-gradient(120deg, hsl(35,50%,88%) 0%, hsl(52,60%,90%) 50%, hsl(35,50%,88%) 100%)`,
-          }}
+          className="absolute inset-0 animate-pulse bg-gradient-to-br from-sand-200 via-muted to-sand-200"
         />
       )}
 
       {/* Thin cream veil — softens without washing out */}
-      <div
-        className="absolute inset-0"
-        style={{ background: "hsla(52, 65%, 93%, 0.18)" }}
-      />
+      <div className="absolute inset-0 bg-background opacity-[0.18]" />
     </div>
   );
 }
