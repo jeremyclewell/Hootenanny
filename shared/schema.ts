@@ -77,6 +77,14 @@ export const insertItemSchema = createInsertSchema(items).omit({
   claimedAt: true,
 });
 
+// Strict shape for the custom-item POST body. Clients are not allowed to
+// set eventId, isCustom, claimedBy, claimedByEmail, or claimedAt — those
+// are server-controlled.
+export const customItemSchema = z.object({
+  name: z.string().min(1, "Item name is required"),
+  category: z.string().min(1, "Category is required"),
+});
+
 export const claimItemSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email().optional().or(z.literal("")),

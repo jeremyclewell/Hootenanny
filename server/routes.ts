@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { insertEventSchema, insertItemSchema, claimItemSchema, editItemSchema, submitVoteSchema, finalizeDateSchema, addCandidateDatesSchema, reopenPollSchema, submitRsvpSchema, type Event } from "@shared/schema";
+import { insertEventSchema, customItemSchema, claimItemSchema, editItemSchema, submitVoteSchema, finalizeDateSchema, addCandidateDatesSchema, reopenPollSchema, submitRsvpSchema, type Event } from "@shared/schema";
 import { getThemeItems } from "../client/src/lib/theme-items";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -57,16 +57,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Seed theme items at creation so the host can prep the menu
       // (add / edit / remove items) even while a date poll is open.
       const themeItems = getThemeItems(eventData.theme);
-      for (const item of themeItems) {
-        await storage.addItem({
+      await storage.addItems(
+        themeItems.map((item) => ({
           eventId: event.id,
           name: item.name,
           category: item.category,
           isCustom: false,
           claimedBy: null,
           claimedByEmail: null,
-        });
-      }
+        })),
+      );
 
       // Return the full event including the host token so the creator's
       // browser can store it in localStorage and prove ownership later.
@@ -184,16 +184,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingItems = await storage.getEventItems(req.params.id);
       if (existingItems.length === 0) {
         const themeItems = getThemeItems(updated.theme);
-        for (const item of themeItems) {
-          await storage.addItem({
+        await storage.addItems(
+          themeItems.map((item) => ({
             eventId: updated.id,
             name: item.name,
             category: item.category,
             isCustom: false,
             claimedBy: null,
             claimedByEmail: null,
-          });
-        }
+          })),
+        );
       }
 
       broadcastToEvent(req.params.id, {
@@ -363,17 +363,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Add custom item
+  // Add custom item — clients are only allowed to set name + category;
+  // every other field (eventId, isCustom, claimed*) is fixed by the server.
   app.post("/api/events/:id/items", async (req, res) => {
     try {
-      const itemData = insertItemSchema.parse({
-        ...req.body,
+      const { name, category } = customItemSchema.parse(req.body);
+      const item = await storage.addItem({
         eventId: req.params.id,
+        name,
+        category,
         isCustom: true,
+        claimedBy: null,
+        claimedByEmail: null,
       });
-      const item = await storage.addItem(itemData);
 
-      // Broadcast update
       broadcastToEvent(req.params.id, {
         type: 'itemAdded',
         item,
@@ -417,9 +420,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const itemId = parseInt(req.params.id);
       const updateData = editItemSchema.parse(req.body);
 
-      // First get the item to check if it's unclaimed
-      const items = await storage.getEventItems(req.body.eventId);
-      const item = items.find(i => i.id === itemId);
+      const item = await storage.getItem(itemId);
 
       if (!item) {
         return res.status(404).json({ message: "Item not found" });
@@ -451,15 +452,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/items/:id/unclaim", async (req, res) => {
     try {
       const itemId = parseInt(req.params.id);
-      const { eventId } = req.body;
 
-      if (!eventId) {
-        return res.status(400).json({ message: "Event ID is required" });
-      }
-
-      // First get the item to check if it's claimed
-      const items = await storage.getEventItems(eventId);
-      const item = items.find(i => i.id === itemId);
+      const item = await storage.getItem(itemId);
 
       if (!item) {
         return res.status(404).json({ message: "Item not found" });
@@ -476,7 +470,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Broadcast update
-      broadcastToEvent(eventId, {
+      broadcastToEvent(item.eventId, {
         type: 'itemUnclaimed',
         item: unclaimedItem,
       });
@@ -491,15 +485,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/items/:id", async (req, res) => {
     try {
       const itemId = parseInt(req.params.id);
-      const { eventId } = req.body;
 
-      if (!eventId) {
-        return res.status(400).json({ message: "Event ID is required" });
-      }
-
-      // First get the item to check if it's unclaimed
-      const items = await storage.getEventItems(eventId);
-      const item = items.find(i => i.id === itemId);
+      const item = await storage.getItem(itemId);
 
       if (!item) {
         return res.status(404).json({ message: "Item not found" });
@@ -515,8 +502,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Failed to delete item" });
       }
 
-      // Broadcast update
-      broadcastToEvent(eventId, {
+      broadcastToEvent(item.eventId, {
         type: 'itemDeleted',
         itemId: itemId,
       });
