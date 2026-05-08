@@ -4,7 +4,6 @@ import { useWebSocket } from "@/lib/websocket";
 import { queryClient } from "@/lib/queryClient";
 import { useEffect, useState } from "react";
 import EventHeader from "@/components/event-header";
-import MapBackground from "@/components/map-banner";
 import AddCustomItem from "@/components/add-custom-item";
 import ItemCategories from "@/components/item-categories";
 import ClaimItemModal from "@/components/claim-item-modal";
@@ -117,7 +116,6 @@ export default function EventPage() {
   if (isPolling) {
     return (
       <>
-        {event.location && <MapBackground location={event.location} />}
         <div className="min-h-screen relative" style={{ zIndex: 1 }}>
           <EventHeader event={event} />
           <main className="max-w-2xl mx-auto px-4 sm:px-6 pb-16">
@@ -131,8 +129,6 @@ export default function EventPage() {
   // ─── Normal mode: date confirmed (or optional date, no poll) ─────────────
   return (
     <>
-      {event.location && <MapBackground location={event.location} />}
-
       <div className="min-h-screen relative" style={{ zIndex: 1 }}>
         <EventHeader event={event} />
 
