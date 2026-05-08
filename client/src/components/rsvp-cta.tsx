@@ -55,13 +55,13 @@ export default function RsvpCta({ eventId, eventTitle }: RsvpCtaProps) {
     const Icon = status.icon;
     return (
       <div
-        className={`mb-6 flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between ${status.cardClass}`}
+        className={`mb-6 flex flex-col gap-3 surface-callout p-4 sm:flex-row sm:items-center sm:justify-between ${status.cardClass}`}
         data-testid="rsvp-cta-confirmed"
       >
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-card shadow-sm shrink-0">
+          <span className="icon-chip-md bg-card shadow-sm">
             <Icon className={`h-5 w-5 ${status.iconClass}`} />
-          </div>
+          </span>
           <div>
             <p className="text-sm font-semibold text-foreground">You're RSVP'd: {status.label}</p>
             <p className="text-xs text-muted-foreground">Changed your mind? Update anytime.</p>
@@ -82,13 +82,13 @@ export default function RsvpCta({ eventId, eventTitle }: RsvpCtaProps) {
 
   return (
     <div
-      className="mb-6 flex flex-col gap-4 rounded-2xl border border-terracotta-100 bg-terracotta-50 p-5 sm:flex-row sm:items-center sm:justify-between"
+      className="mb-6 flex flex-col gap-4 surface-callout border-terracotta-100 bg-terracotta-50 p-5 sm:flex-row sm:items-center sm:justify-between"
       data-testid="rsvp-cta-prompt"
     >
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-white shadow-sm">
+        <span className="icon-chip-md bg-primary text-white shadow-sm">
           <MailCheck className="h-5 w-5" />
-        </div>
+        </span>
         <div>
           <p className="font-semibold text-foreground">Are you coming?</p>
           <p className="text-sm text-muted-foreground">Let the host know — yes, no, or maybe.</p>
@@ -97,7 +97,7 @@ export default function RsvpCta({ eventId, eventTitle }: RsvpCtaProps) {
       <RsvpDialog
         eventId={eventId}
         trigger={
-          <Button className="bg-primary hover:bg-primary/90 shadow-sm" data-testid="button-rsvp-cta">
+          <Button className="bg-primary hover:bg-primary/90 shadow-sm h-11" data-testid="button-rsvp-cta">
             <MailCheck className="mr-2 h-4 w-4" />
             RSVP now
           </Button>

@@ -199,9 +199,9 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
         {/* Header */}
         <DialogHeader>
           <div className="flex items-start gap-3 pr-12">
-            <div className="w-11 h-11 rounded-xl bg-terracotta-100 flex items-center justify-center shrink-0">
+            <span className="icon-chip-md bg-terracotta-100">
               <Mail className="h-5 w-5 text-primary" />
-            </div>
+            </span>
             <div className="min-w-0 flex-1">
               <DialogTitle className="font-serif text-2xl font-bold text-foreground leading-tight">
                 Are you coming?
@@ -270,12 +270,12 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
                         : "border-border/60 bg-card hover:border-sand-300"
                     )}
                   >
-                    <div className={cn(
-                      "w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors",
+                    <span className={cn(
+                      "icon-chip-sm transition-colors",
                       isSelected ? opt.selectedIconBg : opt.defaultIconBg
                     )}>
                       <Icon className={cn("h-4 w-4", isSelected ? "" : opt.defaultIconColor)} />
-                    </div>
+                    </span>
                     <span className="text-base font-medium text-foreground flex-1">{opt.label}</span>
                     {isSelected && (
                       <span className="text-foreground/70 text-sm shrink-0" aria-hidden>✦</span>
@@ -288,10 +288,10 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
 
           {/* Plus-ones stepper — only shown when attending (yes or maybe) */}
           {(response === "yes" || response === "maybe") && (
-            <div className="flex items-center gap-4 rounded-xl border border-border/60 bg-muted/40 px-4 py-3">
-              <div className="flex w-9 h-9 shrink-0 items-center justify-center rounded-full bg-sand-100">
+            <div className="flex items-center gap-4 surface-callout border-border/60 bg-muted/40 px-4 py-3">
+              <span className="icon-chip-sm bg-sand-100">
                 <Users className="h-4 w-4 text-sand-600" />
-              </div>
+              </span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-foreground leading-tight">Bringing anyone?</p>
                 <p className="text-xs text-muted-foreground mt-0.5">

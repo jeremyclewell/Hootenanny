@@ -60,7 +60,7 @@ export default function EventOverview({ event, items, stats, onViewPotluck }: Ev
                   }`}
                 >
                   <div className="flex items-start gap-3 mb-2">
-                    <div className="w-12 h-12 rounded-lg bg-sand-100 flex flex-col items-center justify-center shrink-0">
+                    <div className="w-12 h-12 rounded-xl bg-sand-100 flex flex-col items-center justify-center shrink-0">
                       <span className="text-[10px] font-semibold text-muted-foreground uppercase leading-none">
                         {format(date, "MMM")}
                       </span>

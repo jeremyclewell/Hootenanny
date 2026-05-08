@@ -235,10 +235,10 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-3 font-serif text-xl">
-                <span className="icon-chip-sm bg-sand-100">
+                <span className="icon-chip-sm bg-sage-100">
                   {isHost
-                    ? <Crown className="h-4 w-4 text-sand-600" />
-                    : <Users className="h-4 w-4 text-sand-600" />}
+                    ? <Crown className="h-4 w-4 text-sage-600" />
+                    : <Users className="h-4 w-4 text-sage-600" />}
                 </span>
                 Results so far
               </CardTitle>
@@ -353,13 +353,13 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
                 key={row.date}
                 className={`surface-callout p-4 transition-all ${
                   isLeader
-                    ? "border-sand-200 bg-sand-100"
+                    ? "border-sage-200 bg-sage-50"
                     : "border-border bg-card"
                 }`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    {isLeader && <Trophy className="h-4 w-4 text-sand-600" />}
+                    {isLeader && <Trophy className="h-4 w-4 text-sage-600" />}
                     <div>
                       <p className="font-semibold text-foreground">
                         {format(parseISO(row.date), "EEEE, MMM d, yyyy")}
@@ -375,7 +375,7 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
                       size="sm"
                       onClick={() => finalizeMutation.mutate(row.date)}
                       disabled={finalizeMutation.isPending}
-                      className={`rounded-full ${isLeader ? "bg-primary hover:bg-primary/90 shadow-sm" : ""}`}
+                      className={isLeader ? "bg-sage-600 hover:bg-sage-700 text-white shadow-sm" : ""}
                       variant={isLeader ? "default" : "outline"}
                     >
                       Finalize this date
@@ -385,7 +385,7 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
                 {totalVoters > 0 && (
                   <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
                     <div
-                      className={`h-full rounded-full transition-all ${isLeader ? "bg-primary" : "bg-sand-400"}`}
+                      className={`h-full rounded-full transition-all ${isLeader ? "bg-sage-500" : "bg-sand-400"}`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>

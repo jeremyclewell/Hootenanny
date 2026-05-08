@@ -76,10 +76,10 @@ export default function QuickStats({ stats, rsvpStats }: QuickStatsProps) {
         return (
           <div
             key={tile.key}
-            className="bg-card rounded-2xl border border-border shadow-warm p-4"
+            className="surface-card p-4"
             data-testid={tile.testId}
           >
-            <div className={`w-9 h-9 ${tile.iconBg} rounded-lg flex items-center justify-center mb-4`}>
+            <div className={`icon-chip-sm ${tile.iconBg} mb-4`}>
               <Icon className={`h-4 w-4 ${tile.iconColor}`} />
             </div>
             <p className="text-3xl font-serif font-semibold text-foreground leading-none mb-2">{tile.value}</p>

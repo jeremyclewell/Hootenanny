@@ -234,7 +234,7 @@ function DetailCell({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <span className="w-8 h-8 rounded-lg bg-sand-100 flex items-center justify-center shrink-0 mt-0.5">
+      <span className="icon-chip-sm bg-sand-100 mt-0.5">
         <Icon className="h-4 w-4 text-foreground/70" />
       </span>
       <div className="min-w-0">
