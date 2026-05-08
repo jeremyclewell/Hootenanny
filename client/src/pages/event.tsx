@@ -5,7 +5,6 @@ import { queryClient } from "@/lib/queryClient";
 import { useEffect, useState } from "react";
 import EventHeader from "@/components/event-header";
 import MapBackground from "@/components/map-banner";
-import QuickStats from "@/components/quick-stats";
 import AddCustomItem from "@/components/add-custom-item";
 import ItemCategories from "@/components/item-categories";
 import ClaimItemModal from "@/components/claim-item-modal";
@@ -14,28 +13,16 @@ import PollView from "@/components/poll-view";
 import ReopenPollBanner from "@/components/reopen-poll-banner";
 import RsvpList from "@/components/rsvp-list";
 import RsvpCta from "@/components/rsvp-cta";
-import EventOverview from "@/components/event-overview";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle } from "lucide-react";
-import type { Event, Item, Rsvp } from "@shared/schema";
-
-type PublicRsvp = Omit<Rsvp, "guestEmail">;
-
-interface EventStats {
-  total: number;
-  claimed: number;
-  available: number;
-  custom: number;
-}
+import type { Event, Item } from "@shared/schema";
 
 export default function EventPage() {
   const { id } = useParams();
   const { lastMessage } = useWebSocket(id || null);
 
   const [hostToken, setHostToken] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<string>("overview");
 
   useEffect(() => {
     if (!id) return;
@@ -59,16 +46,6 @@ export default function EventPage() {
     enabled: !!id && !isPolling,
   });
 
-  const statsQuery = useQuery<EventStats>({
-    queryKey: [`/api/events/${id}/stats`],
-    enabled: !!id && !isPolling,
-  });
-
-  const rsvpsQuery = useQuery<PublicRsvp[]>({
-    queryKey: [`/api/events/${id}/rsvps`],
-    enabled: !!id && !isPolling,
-  });
-
   useEffect(() => {
     if (!lastMessage || !id) return;
     if (
@@ -79,7 +56,6 @@ export default function EventPage() {
       lastMessage.type === "itemUnclaimed"
     ) {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/items`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/stats`] });
     }
     if (lastMessage.type === "voteSubmitted") {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/votes`] });
@@ -90,7 +66,6 @@ export default function EventPage() {
     if (lastMessage.type === "dateFinalized" || lastMessage.type === "pollReopened") {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/items`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/stats`] });
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/votes`] });
     }
     if (lastMessage.type === "candidateDatesUpdated") {
@@ -135,12 +110,6 @@ export default function EventPage() {
 
   const event = eventQuery.data;
   const items = itemsQuery.data || [];
-  const stats = statsQuery.data || { total: 0, claimed: 0, available: 0, custom: 0 };
-  const rsvps = rsvpsQuery.data || [];
-  const rsvpStats = {
-    going: rsvps.filter((r) => r.response === "yes").length,
-    maybe: rsvps.filter((r) => r.response === "maybe").length,
-  };
 
   // ─── Polling mode: date not yet confirmed ────────────────────────────────
   // Show only the event header and the date poll. Nothing else is actionable
@@ -174,53 +143,12 @@ export default function EventPage() {
             <ReopenPollBanner event={event} hostToken={hostToken} />
           )}
 
-          <QuickStats stats={stats} rsvpStats={rsvpStats} />
+          <RsvpList eventId={event.id} isHost={isHost} hostToken={hostToken} />
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="flex justify-center mb-6">
-              <TabsList className="bg-transparent gap-1 h-auto p-1">
-                <TabsTrigger
-                  value="overview"
-                  className="rounded-full px-5 py-2 data-[state=active]:bg-card data-[state=active]:shadow-warm data-[state=inactive]:text-muted-foreground"
-                  data-testid="tab-overview"
-                >
-                  Overview
-                </TabsTrigger>
-                <TabsTrigger
-                  value="potluck"
-                  className="rounded-full px-5 py-2 data-[state=active]:bg-card data-[state=active]:shadow-warm data-[state=inactive]:text-muted-foreground"
-                  data-testid="tab-potluck"
-                >
-                  Potluck
-                </TabsTrigger>
-                <TabsTrigger
-                  value="guests"
-                  className="rounded-full px-5 py-2 data-[state=active]:bg-card data-[state=active]:shadow-warm data-[state=inactive]:text-muted-foreground"
-                  data-testid="tab-guests"
-                >
-                  Guests
-                </TabsTrigger>
-              </TabsList>
-            </div>
-
-            <TabsContent value="overview" className="mt-0">
-              <EventOverview
-                event={event}
-                items={items}
-                stats={stats}
-                onViewPotluck={() => setActiveTab("potluck")}
-              />
-            </TabsContent>
-
-            <TabsContent value="potluck" className="mt-0 space-y-4">
-              <AddCustomItem eventId={event.id} />
-              <ItemCategories items={items} eventId={event.id} />
-            </TabsContent>
-
-            <TabsContent value="guests" className="mt-0">
-              <RsvpList eventId={event.id} isHost={isHost} hostToken={hostToken} />
-            </TabsContent>
-          </Tabs>
+          <div className="mt-8 space-y-4">
+            <AddCustomItem eventId={event.id} />
+            <ItemCategories items={items} eventId={event.id} />
+          </div>
 
           <ClaimItemModal />
           <EditItemModal />
