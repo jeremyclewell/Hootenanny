@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertItemSchema, type InsertItem } from "@shared/schema";
+import { insertItemSchema } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { CATEGORIES } from "@/lib/categories";
@@ -76,12 +75,19 @@ export default function AddCustomItem({ eventId }: AddCustomItemProps) {
 
   return (
     <div className="surface-card p-6 mb-6">
-      <div className="flex items-center gap-3 mb-4">
-        <span className="icon-chip-sm bg-terracotta-50">
-          <PlusCircle className="h-4 w-4 text-primary" />
+      {/* Section header row — icon chip + title + subtitle */}
+      <div className="mb-5 flex items-start gap-3">
+        <span className="icon-chip-md bg-terracotta-50">
+          <PlusCircle className="h-5 w-5 text-primary" />
         </span>
-        <h3 className="text-lg font-serif font-semibold text-foreground">Add a custom item</h3>
+        <div className="min-w-0">
+          <h3 className="text-base font-semibold text-foreground">Add a custom item</h3>
+          <p className="text-sm text-muted-foreground">
+            Bringing something not on the list? Add it so others know.
+          </p>
+        </div>
       </div>
+
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit((d) => addItemMutation.mutate(d))}
@@ -126,7 +132,7 @@ export default function AddCustomItem({ eventId }: AddCustomItemProps) {
           </div>
           <Button
             type="submit"
-            className="bg-primary hover:bg-primary/90 rounded-full"
+            className="rounded-full bg-coral-gradient hover:opacity-90 shadow-coral border-0 text-white"
             disabled={addItemMutation.isPending}
           >
             <Plus className="mr-2 h-4 w-4" />

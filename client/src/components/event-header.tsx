@@ -1,3 +1,4 @@
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -6,11 +7,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Utensils, MapPin, Users, Calendar, CalendarPlus, Download, MailCheck, Clock, Hourglass } from "lucide-react";
+import {
+  Share2, Utensils, MapPin, Users, Calendar, CalendarPlus, Download,
+  Clock, Hourglass, Plus, Bell,
+} from "lucide-react";
 import type { Event } from "@shared/schema";
 import { buildGoogleCalendarUrl, downloadIcsFile, parseLocalDate } from "@/lib/calendar";
 import { SiGooglecalendar } from "react-icons/si";
-import RsvpDialog from "@/components/rsvp-dialog";
 import { formatDuration } from "@/lib/duration";
 import { format } from "date-fns";
 
@@ -37,16 +40,34 @@ function calcEndTime(time: string, durationMinutes: number): string {
   return `${hour12}:${String(endM).padStart(2, "0")} ${period}`;
 }
 
-/** Concentric-circles "event disc" icon in a soft rounded square. */
-function ThemeDisc() {
+/** Decorative string-lights svg, top-right of the dark hero. */
+function StringLights() {
+  const color = "rgba(255, 245, 204, 0.9)";
   return (
-    <div className="w-20 h-20 rounded-2xl bg-terracotta-50 border border-terracotta-100 flex items-center justify-center shrink-0">
-      <div className="relative w-12 h-12 rounded-full border-2 border-terracotta-100">
-        <div className="absolute inset-1.5 rounded-full border border-terracotta-100" />
-        <div className="absolute inset-3.5 rounded-full border border-terracotta-400" />
-        <div className="absolute left-1/2 top-1/2 w-1.5 h-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary" />
-      </div>
-    </div>
+    <svg
+      className="pointer-events-none absolute right-2 top-2 hidden opacity-90 sm:block"
+      width="520"
+      height="120"
+      viewBox="0 0 520 120"
+      fill="none"
+      aria-hidden
+    >
+      <path
+        d="M10 20 C 120 90, 220 90, 320 35 S 500 80, 510 25"
+        stroke="rgba(255, 245, 204, 0.55)"
+        strokeWidth="1"
+        fill="none"
+      />
+      {[
+        [55, 55], [110, 78], [165, 80], [220, 65], [275, 50],
+        [330, 38], [380, 50], [430, 65], [475, 70], [505, 50],
+      ].map(([cx, cy], i) => (
+        <g key={i}>
+          <circle cx={cx} cy={cy} r="9" fill={color} opacity="0.25" />
+          <circle cx={cx} cy={cy} r="3.5" fill={color} />
+        </g>
+      ))}
+    </svg>
   );
 }
 
@@ -69,9 +90,12 @@ export default function EventHeader({ event }: EventHeaderProps) {
     }
   };
 
-  const formattedDate = event.date
-    ? format(parseLocalDate(event.date), "EEE, MMM d, yyyy")
-    : null;
+  const formattedDate = (() => {
+    if (!event.date) return null;
+    const d = parseLocalDate(event.date);
+    if (Number.isNaN(d.getTime())) return event.date; // fall back to raw string
+    return format(d, "EEEE, MMMM d, yyyy");
+  })();
 
   const timeRange = (() => {
     if (!event.time) return null;
@@ -85,136 +109,144 @@ export default function EventHeader({ event }: EventHeaderProps) {
 
   return (
     <>
-      {/* Nav bar */}
-      <header className="bg-card border-b border-border shadow-warm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <div className="icon-chip-sm bg-primary">
-                <Utensils className="text-white h-4 w-4" />
-              </div>
-              <div>
-                <span className="text-lg font-serif font-semibold text-foreground">Hootenanny</span>
-                <p className="text-xs text-muted-foreground leading-none">{event.title}</p>
-              </div>
+      {/* Top nav — white pill card */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        <nav className="flex items-center justify-between rounded-2xl border border-border bg-card px-4 py-3 shadow-warm">
+          <Link href="/" className="flex items-center gap-2.5 hover-elevate active-elevate-2 rounded-xl pr-3 -ml-1 px-1 py-0.5">
+            <div className="icon-chip-sm bg-coral-gradient">
+              <Utensils className="text-white h-4 w-4" />
             </div>
-            <div className="flex items-center gap-2">
-              {event.date && event.pollStatus !== "polling" && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="rounded-full" data-testid="button-add-to-calendar">
-                      <CalendarPlus className="mr-2 h-4 w-4" />
-                      <span className="hidden sm:inline">Add to calendar</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={() => {
-                        const url = buildGoogleCalendarUrl(event);
-                        if (url) window.open(url, "_blank", "noopener,noreferrer");
-                        else toast({ title: "Missing date", variant: "destructive" });
-                      }}
-                      data-testid="menu-google-calendar"
-                    >
-                      <SiGooglecalendar className="mr-2 h-4 w-4" />
-                      Google Calendar
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        const ok = downloadIcsFile(event);
-                        if (!ok) { toast({ title: "Missing date", variant: "destructive" }); return; }
-                        toast({ title: "Calendar file downloaded", description: "Open the .ics file to add it to Apple Calendar or Outlook." });
-                      }}
-                      data-testid="menu-ics-download"
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Apple / Outlook (.ics)
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-              {event.pollStatus !== "polling" && (
-                <RsvpDialog
-                  eventId={event.id}
-                  trigger={
-                    <Button variant="outline" size="sm" className="rounded-full" data-testid="button-rsvp">
-                      <MailCheck className="mr-2 h-4 w-4" />
-                      RSVP
-                    </Button>
-                  }
-                />
-              )}
-              <Button onClick={handleShare} size="sm" className="bg-primary hover:bg-primary/90 rounded-full ">
-                <Upload className="mr-2 h-4 w-4" />
-                Share
+            <span className="font-serif text-lg font-semibold text-foreground">Hootenanny</span>
+          </Link>
+
+          <div className="flex items-center gap-2 sm:gap-3">
+            {event.date && event.pollStatus !== "polling" && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="rounded-full" data-testid="button-add-to-calendar">
+                    <CalendarPlus className="sm:mr-2 h-4 w-4" />
+                    <span className="hidden sm:inline">Add to calendar</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => {
+                      const url = buildGoogleCalendarUrl(event);
+                      if (url) window.open(url, "_blank", "noopener,noreferrer");
+                      else toast({ title: "Missing date", variant: "destructive" });
+                    }}
+                    data-testid="menu-google-calendar"
+                  >
+                    <SiGooglecalendar className="mr-2 h-4 w-4" />
+                    Google Calendar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      const ok = downloadIcsFile(event);
+                      if (!ok) { toast({ title: "Missing date", variant: "destructive" }); return; }
+                      toast({ title: "Calendar file downloaded", description: "Open the .ics file to add it to Apple Calendar or Outlook." });
+                    }}
+                    data-testid="menu-ics-download"
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Apple / Outlook (.ics)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            <Link href="/create">
+              <Button size="sm" className="rounded-full bg-coral-gradient hover:opacity-90 shadow-coral border-0 text-white">
+                <Plus className="sm:mr-1.5 h-4 w-4" />
+                <span className="hidden sm:inline">Create Event</span>
               </Button>
-            </div>
+            </Link>
+            <button
+              onClick={handleShare}
+              className="hover-elevate active-elevate-2 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-muted-foreground"
+              aria-label="Share event"
+              data-testid="button-share"
+            >
+              <Share2 className="h-4 w-4" />
+            </button>
+            <span
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-muted-foreground"
+              aria-hidden
+            >
+              <Bell className="h-4 w-4" />
+            </span>
           </div>
-        </div>
-      </header>
+        </nav>
+      </div>
 
-      {/* Event info card */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-        <div className="relative surface-card p-7 sm:p-8 mb-6 overflow-hidden">
-          {/* Asterisk decoration */}
-          <span className="absolute top-5 right-6 text-2xl text-muted-foreground/30 select-none pointer-events-none" aria-hidden>✦</span>
+      {/* Hero card — dark teal gradient with string lights */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+        <div
+          className="relative overflow-hidden rounded-3xl p-7 sm:p-10 text-white bg-aurora-hero"
+          data-testid="event-hero"
+        >
+          <StringLights />
+          {/* Soft moon glow */}
+          <div
+            className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full opacity-30"
+            style={{ background: "radial-gradient(circle, rgba(255,255,255,0.35), transparent 70%)" }}
+            aria-hidden
+          />
 
-          <div className="flex items-start gap-5">
-            <ThemeDisc />
-
-            <div className="flex-1 min-w-0">
-              {/* Badges row */}
-              <div className="flex flex-wrap items-center gap-2 mb-3">
-                {isOpenForRsvps && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-sage-50 border border-sage-100 px-3 py-1 text-xs font-medium text-sage-700">
-                    <span className="w-1.5 h-1.5 rounded-full bg-sage-600 inline-block" />
-                    Open for RSVPs
-                  </span>
-                )}
-                {event.pollStatus === "polling" && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-sand-100 border border-sand-200 px-3 py-1 text-xs font-medium text-sand-600">
-                    <Calendar className="h-3 w-3" />
-                    Date poll open
-                  </span>
-                )}
-                {event.pollStatus === "finalized" && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 border border-teal-100 px-3 py-1 text-xs font-medium text-teal-700">
-                    <span className="w-1.5 h-1.5 rounded-full bg-teal-500 inline-block" />
-                    Date confirmed
-                  </span>
-                )}
-              </div>
-
-              {/* Title */}
-              <h1 className="text-3xl sm:text-4xl font-serif font-bold text-foreground mb-3 leading-tight">
-                {event.title}
-              </h1>
-
-              {/* Description */}
-              {event.description && (
-                <p className="text-sm text-muted-foreground mb-7 leading-relaxed max-w-2xl">
-                  {event.description}
-                </p>
+          <div className="relative">
+            {/* Status pills */}
+            <div className="mb-6 flex flex-wrap items-center gap-2">
+              {isOpenForRsvps && (
+                <span className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1.5 text-xs font-medium text-white/95 backdrop-blur-sm">
+                  <span className="h-2 w-2 rounded-full" style={{ background: "hsl(150, 65%, 60%)" }} />
+                  Open for RSVPs
+                </span>
               )}
+              {event.pollStatus === "polling" && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/12 px-3 py-1.5 text-xs font-medium text-white/95 backdrop-blur-sm">
+                  <Calendar className="h-3 w-3" />
+                  Date poll open
+                </span>
+              )}
+              {event.pollStatus === "finalized" && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/12 px-3 py-1.5 text-xs font-medium text-white/95 backdrop-blur-sm">
+                  <Calendar className="h-3 w-3" />
+                  Date confirmed
+                </span>
+              )}
+            </div>
 
-              {/* Detail grid: 3 columns for date/time/location, then guests on its own row */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-5">
-                {formattedDate && (
-                  <DetailCell icon={Calendar} label="Date" value={formattedDate} />
-                )}
-                {timeRange && (
-                  <DetailCell icon={Clock} label="Time" value={timeRange} />
-                )}
-                {event.location && (
-                  <DetailCell icon={MapPin} label="Location" value={event.location} />
-                )}
-                {event.expectedGuests && (
-                  <DetailCell icon={Users} label="Guests" value={`${event.expectedGuests} expected`} />
-                )}
-                {event.durationMinutes && !event.time && (
-                  <DetailCell icon={Hourglass} label="Duration" value={formatDuration(event.durationMinutes)} />
-                )}
-              </div>
+            {/* Title */}
+            <h1
+              className="mb-8 font-serif text-4xl font-semibold leading-tight tracking-tight sm:text-5xl lg:text-6xl"
+              data-testid="event-title"
+            >
+              {event.title}
+            </h1>
+
+            {/* Description */}
+            {event.description && (
+              <p className="mb-8 max-w-2xl text-sm leading-relaxed text-white/75 sm:text-base">
+                {event.description}
+              </p>
+            )}
+
+            {/* Detail grid */}
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+              {formattedDate && (
+                <HeroDetail icon={Calendar} label="Date" value={formattedDate} />
+              )}
+              {timeRange && (
+                <HeroDetail icon={Clock} label="Time" value={timeRange} />
+              )}
+              {event.location && (
+                <HeroDetail icon={MapPin} label="Location" value={event.location} />
+              )}
+              {event.expectedGuests && (
+                <HeroDetail icon={Users} label="Guests" value={`${event.expectedGuests} expected`} />
+              )}
+              {event.durationMinutes && !event.time && (
+                <HeroDetail icon={Hourglass} label="Duration" value={formatDuration(event.durationMinutes)} />
+              )}
             </div>
           </div>
         </div>
@@ -223,7 +255,7 @@ export default function EventHeader({ event }: EventHeaderProps) {
   );
 }
 
-function DetailCell({
+function HeroDetail({
   icon: Icon,
   label,
   value,
@@ -234,12 +266,15 @@ function DetailCell({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <span className="icon-chip-sm bg-sand-100 mt-0.5">
-        <Icon className="h-4 w-4 text-foreground/70" />
+      <span
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white"
+        style={{ background: "rgba(255,255,255,0.10)" }}
+      >
+        <Icon className="h-4 w-4" />
       </span>
       <div className="min-w-0">
-        <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
-        <p className="text-sm font-semibold text-foreground leading-snug">{value}</p>
+        <p className="text-[11px] font-medium uppercase tracking-wide text-white/60">{label}</p>
+        <p className="mt-0.5 text-sm leading-snug text-white">{value}</p>
       </div>
     </div>
   );

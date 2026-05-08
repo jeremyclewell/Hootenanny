@@ -1,9 +1,19 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Check, HelpCircle, X, MailCheck, Pencil } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Check, HelpCircle, X, Mail, Pencil, Calendar as CalendarIcon, Share2, ChevronRight, Download } from "lucide-react";
+import { SiGooglecalendar } from "react-icons/si";
+import { useToast } from "@/hooks/use-toast";
+import { useQuery as useEventQuery } from "@tanstack/react-query";
 import RsvpDialog from "@/components/rsvp-dialog";
-import type { Rsvp, RsvpResponse } from "@shared/schema";
+import type { Event, Rsvp, RsvpResponse } from "@shared/schema";
+import { buildGoogleCalendarUrl, downloadIcsFile } from "@/lib/calendar";
 
 const STORAGE_KEY = "hootenanny-voter";
 
@@ -22,15 +32,16 @@ function loadStoredGuest(): StoredGuest | null {
   } catch { return null; }
 }
 
-const STATUS: Record<RsvpResponse, { label: string; icon: React.ComponentType<{ className?: string }>; cardClass: string; iconClass: string; dotClass: string }> = {
-  yes:   { label: "Going",          icon: Check,       cardClass: "border-sage-100 bg-sage-50",       iconClass: "text-sage-600",  dotClass: "bg-sage-400"  },
-  maybe: { label: "Maybe",          icon: HelpCircle,  cardClass: "border-sand-200 bg-sand-100",      iconClass: "text-sand-600",  dotClass: "bg-sand-400"  },
-  no:    { label: "Can't make it",  icon: X,           cardClass: "border-terracotta-100 bg-terracotta-50", iconClass: "text-primary", dotClass: "bg-primary" },
+const STATUS: Record<RsvpResponse, { label: string; icon: React.ComponentType<{ className?: string }>; chipBg: string; chipFg: string }> = {
+  yes:   { label: "Going",         icon: Check,      chipBg: "bg-sage-100",      chipFg: "text-sage-600" },
+  maybe: { label: "Maybe",         icon: HelpCircle, chipBg: "bg-sand-200",      chipFg: "text-sand-600" },
+  no:    { label: "Can't make it", icon: X,          chipBg: "bg-terracotta-100", chipFg: "text-primary"  },
 };
 
 interface RsvpCtaProps { eventId: string; eventTitle: string; }
 
-export default function RsvpCta({ eventId, eventTitle }: RsvpCtaProps) {
+export default function RsvpCta({ eventId, eventTitle: _eventTitle }: RsvpCtaProps) {
+  const { toast } = useToast();
   const [guest, setGuest] = useState<StoredGuest | null>(null);
 
   useEffect(() => {
@@ -41,6 +52,8 @@ export default function RsvpCta({ eventId, eventTitle }: RsvpCtaProps) {
   }, []);
 
   const rsvpsQuery = useQuery<PublicRsvp[]>({ queryKey: [`/api/events/${eventId}/rsvps`] });
+  const eventQuery = useEventQuery<Event>({ queryKey: [`/api/events/${eventId}`] });
+  const event = eventQuery.data;
 
   useEffect(() => { setGuest(loadStoredGuest()); }, [rsvpsQuery.dataUpdatedAt]);
 
@@ -50,59 +63,122 @@ export default function RsvpCta({ eventId, eventTitle }: RsvpCtaProps) {
 
   if (rsvpsQuery.isLoading) return null;
 
+  const handleShare = async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      try { await navigator.share({ title: _eventTitle, url }); } catch {}
+    } else {
+      try {
+        await navigator.clipboard.writeText(url);
+        toast({ title: "Link copied!", description: "Event link copied to clipboard." });
+      } catch {
+        toast({ title: "Share", description: `Share this link: ${url}` });
+      }
+    }
+  };
+
+  const calendarMenu = event && event.date && event.pollStatus !== "polling" ? (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="rounded-full" data-testid="button-rsvpcta-calendar">
+          <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
+          Add to calendar
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem
+          onClick={() => {
+            const url = buildGoogleCalendarUrl(event);
+            if (url) window.open(url, "_blank", "noopener,noreferrer");
+            else toast({ title: "Missing date", variant: "destructive" });
+          }}
+        >
+          <SiGooglecalendar className="mr-2 h-4 w-4" />
+          Google Calendar
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => {
+            const ok = downloadIcsFile(event);
+            if (!ok) { toast({ title: "Missing date", variant: "destructive" }); return; }
+            toast({ title: "Calendar file downloaded" });
+          }}
+        >
+          <Download className="mr-2 h-4 w-4" />
+          Apple / Outlook (.ics)
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  ) : null;
+
+  const shareBtn = (
+    <Button variant="outline" size="sm" className="rounded-full" onClick={handleShare} data-testid="button-rsvpcta-share">
+      <Share2 className="mr-1.5 h-3.5 w-3.5" />
+      Share event
+    </Button>
+  );
+
+  // Already RSVPd — same card layout, status-tinted icon chip + Update button
   if (myRsvp) {
     const status = STATUS[myRsvp.response as RsvpResponse] ?? STATUS.maybe;
     const Icon = status.icon;
     return (
       <div
-        className={`mb-6 flex flex-col gap-3 surface-callout p-4 sm:flex-row sm:items-center sm:justify-between ${status.cardClass}`}
+        className="surface-card mb-6 mt-6 flex flex-col gap-4 p-5 sm:flex-row sm:items-center"
         data-testid="rsvp-cta-confirmed"
       >
-        <div className="flex items-center gap-3">
-          <span className="icon-chip-md bg-card ">
-            <Icon className={`h-5 w-5 ${status.iconClass}`} />
+        <div className="flex flex-1 items-center gap-3">
+          <span className={`icon-chip-md ${status.chipBg}`}>
+            <Icon className={`h-5 w-5 ${status.chipFg}`} />
           </span>
-          <div>
-            <p className="text-sm font-semibold text-foreground">You're RSVP'd: {status.label}</p>
-            <p className="text-xs text-muted-foreground">Changed your mind? Update anytime.</p>
+          <div className="min-w-0">
+            <p className="text-base font-semibold text-foreground">You're RSVP'd: {status.label}</p>
+            <p className="text-sm text-muted-foreground">Changed your mind? Update anytime.</p>
           </div>
         </div>
-        <RsvpDialog
-          eventId={eventId}
-          trigger={
-            <Button variant="outline" size="sm" data-testid="button-update-rsvp">
-              <Pencil className="mr-2 h-3.5 w-3.5" />
-              Update RSVP
-            </Button>
-          }
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          {calendarMenu}
+          {shareBtn}
+          <RsvpDialog
+            eventId={eventId}
+            trigger={
+              <Button size="sm" className="rounded-full bg-coral-gradient hover:opacity-90 shadow-coral border-0 text-white" data-testid="button-update-rsvp">
+                <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                Update RSVP
+              </Button>
+            }
+          />
+        </div>
       </div>
     );
   }
 
   return (
     <div
-      className="mb-6 flex flex-col gap-4 surface-callout border-terracotta-100 bg-terracotta-50 p-5 sm:flex-row sm:items-center sm:justify-between"
+      className="surface-card mb-6 mt-6 flex flex-col gap-4 p-5 sm:flex-row sm:items-center"
       data-testid="rsvp-cta-prompt"
     >
-      <div className="flex items-center gap-3">
-        <span className="icon-chip-md bg-primary text-white ">
-          <MailCheck className="h-5 w-5" />
+      <div className="flex flex-1 items-center gap-3">
+        <span className="icon-chip-md bg-terracotta-50">
+          <Mail className="h-5 w-5 text-primary" />
         </span>
-        <div>
-          <p className="font-semibold text-foreground">Are you coming?</p>
+        <div className="min-w-0">
+          <p className="text-base font-semibold text-foreground">Are you coming?</p>
           <p className="text-sm text-muted-foreground">Let the host know — yes, no, or maybe.</p>
         </div>
       </div>
-      <RsvpDialog
-        eventId={eventId}
-        trigger={
-          <Button className="bg-primary hover:bg-primary/90 h-11" data-testid="button-rsvp-cta">
-            <MailCheck className="mr-2 h-4 w-4" />
-            RSVP now
-          </Button>
-        }
-      />
+      <div className="flex flex-wrap items-center gap-2">
+        {calendarMenu}
+        {shareBtn}
+        <RsvpDialog
+          eventId={eventId}
+          trigger={
+            <Button size="sm" className="rounded-full bg-coral-gradient hover:opacity-90 shadow-coral border-0 text-white" data-testid="button-rsvp-cta">
+              RSVP now
+              <ChevronRight className="ml-0.5 h-4 w-4" />
+            </Button>
+          }
+        />
+      </div>
     </div>
   );
 }

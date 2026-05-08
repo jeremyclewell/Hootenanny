@@ -130,6 +130,7 @@ Changelog:
 - May 5, 2026. Restyled all form fields (Input/Textarea/Select) and Dialog to match design references: soft cream bg, terracotta focus ring, rounded-xl, white-circle close button
 - May 5, 2026. Redesigned RSVP dialog: icon-box header, serif title, sage/sand/terracotta response cards, select-then-save flow, full-width pill CTA
 - May 5, 2026. Added plus-ones feature: plusOnes integer column on rsvps table, stepper UI in RSVP dialog (visible for yes/maybe responses), "+N" display in RSVP list
+- May 8, 2026. Applied "Aurora — Midnight Teal + Coral" design system app-wide: off-white page, coral primary CTA (gradient with shadow-coral helper), midnight-teal hero gradient with decorative string lights SVG, mint/sand/blush RSVP status cards with circular tinted icons, Fraunces serif. Restructured event page: white-pill top nav, dark-hero card with status pills + 3 detail rows, horizontal RSVP CTA row, "Who's coming" with 3 horizontal status cards + collapsible names, restyled "Add a custom item" with white-card icon-chip header. Home + create-event inherit new colors via tokens.
 ```
 
 ## User Preferences
