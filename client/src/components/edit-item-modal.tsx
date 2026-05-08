@@ -149,7 +149,7 @@ export default function EditItemModal() {
             <Button
               type="submit"
               disabled={editItemMutation.isPending}
-              className="w-full bg-primary hover:bg-primary/90 rounded-full h-12 text-base font-medium "
+              className="w-full bg-primary hover:bg-primary/90 rounded-full h-12 text-base font-medium"
             >
               {editItemMutation.isPending ? "Updating…" : "Update item"}
             </Button>

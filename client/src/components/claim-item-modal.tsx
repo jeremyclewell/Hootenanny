@@ -203,7 +203,7 @@ export default function ClaimItemModal() {
 
                 <Button
                   type="submit"
-                  className="w-full bg-primary hover:bg-primary/90 rounded-full h-12 text-base font-medium "
+                  className="w-full bg-primary hover:bg-primary/90 rounded-full h-12 text-base font-medium"
                   disabled={claimItemMutation.isPending}
                 >
                   {claimItemMutation.isPending ? "Claiming…" : "Claim it"}

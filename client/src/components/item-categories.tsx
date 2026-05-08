@@ -177,7 +177,7 @@ export default function ItemCategories({ items, eventId }: ItemCategoriesProps) 
                     <Button
                       size="sm"
                       onClick={() => handleClaimItem(item)}
-                      className="bg-primary hover:bg-primary/90 rounded-full px-4 h-8 text-xs "
+                      className="bg-primary hover:bg-primary/90 rounded-full px-4 h-8 text-xs"
                       data-testid={`button-claim-${item.id}`}
                     >
                       Claim
@@ -247,7 +247,7 @@ export default function ItemCategories({ items, eventId }: ItemCategoriesProps) 
             variant="outline"
             size="sm"
             onClick={() => setExpanded((v) => !v)}
-            className="rounded-full bg-card "
+            className="rounded-full bg-card"
             data-testid="button-toggle-categories"
           >
             {expanded

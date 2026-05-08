@@ -116,7 +116,7 @@
      .surface-callout → border rounded-2xl
 
    Icon chips (colored squares behind a lucide icon):
-     .icon-chip-sm    → 36×36, rounded-lg   (use inside list rows / detail cells)
+     .icon-chip-sm    → 36×36, rounded-xl   (use inside list rows / detail cells)
      .icon-chip-md    → 44×44, rounded-xl   (use in card / dialog headers)
 
    Buttons: primary CTAs and secondary/outline buttons all use rounded-full.

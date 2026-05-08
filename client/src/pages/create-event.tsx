@@ -440,7 +440,7 @@ export default function CreateEvent() {
 
                 <Button
                   type="submit"
-                  className="w-full bg-primary hover:bg-primary/90 rounded-full h-12 text-base font-medium "
+                  className="w-full bg-primary hover:bg-primary/90 rounded-full h-12 text-base font-medium"
                   disabled={createEventMutation.isPending}
                 >
                   <PartyPopper className="mr-2 h-5 w-5" />
