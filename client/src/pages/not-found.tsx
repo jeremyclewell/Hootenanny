@@ -9,7 +9,7 @@ export default function NotFound() {
       <header className="bg-card border-b border-border shadow-warm px-6 sm:px-10 lg:px-16 py-4">
         <Link href="/">
           <div className="flex items-center gap-3 cursor-pointer w-fit">
-            <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-sm">
+            <div className="icon-chip-sm bg-primary">
               <Utensils className="text-white h-4 w-4" />
             </div>
             <span className="text-lg font-serif font-semibold text-foreground">Hootenanny</span>
@@ -18,7 +18,7 @@ export default function NotFound() {
       </header>
 
       <main className="flex-1 flex items-center justify-center p-6">
-        <Card className="w-full max-w-md shadow-warm border-border">
+        <Card className="w-full max-w-md surface-card">
           <CardContent className="pt-8 pb-8 text-center">
             <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-terracotta-50 border border-terracotta-100">
               <Compass className="h-6 w-6 text-primary" />

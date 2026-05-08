@@ -67,7 +67,7 @@ export default function ReopenPollBanner({ event, hostToken }: ReopenPollBannerP
     <Card className="mb-6 surface-callout border-sand-200 bg-sand-100 shadow-none">
       <CardContent className="flex flex-wrap items-start justify-between gap-3 pt-6">
         <div className="flex items-start gap-3">
-          <span className="icon-chip-sm bg-card shadow-sm">
+          <span className="icon-chip-sm bg-card ">
             <CalendarRange className="h-4 w-4 text-sand-600" />
           </span>
           <div>

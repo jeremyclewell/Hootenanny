@@ -8,7 +8,7 @@ export default function Home() {
       {/* Header */}
       <header className="bg-card border-b border-border shadow-warm px-6 sm:px-10 lg:px-16 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-sm">
+          <div className="icon-chip-sm bg-primary">
             <Utensils className="text-white h-4 w-4" />
           </div>
           <span className="text-lg font-serif font-semibold text-foreground">Hootenanny</span>

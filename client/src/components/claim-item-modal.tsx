@@ -153,7 +153,7 @@ export default function ClaimItemModal() {
         {selectedItem && (
           <>
             <div className="surface-callout border-sand-200 bg-sand-100 flex items-center gap-3 p-3">
-              <span className="icon-chip-sm bg-card shadow-sm">
+              <span className="icon-chip-sm bg-card ">
                 <UtensilsCrossed className="h-4 w-4 text-primary" />
               </span>
               <div>
@@ -203,7 +203,7 @@ export default function ClaimItemModal() {
 
                 <Button
                   type="submit"
-                  className="w-full bg-primary hover:bg-primary/90 rounded-full h-12 text-base font-medium shadow-sm"
+                  className="w-full bg-primary hover:bg-primary/90 rounded-full h-12 text-base font-medium "
                   disabled={claimItemMutation.isPending}
                 >
                   {claimItemMutation.isPending ? "Claiming…" : "Claim it"}

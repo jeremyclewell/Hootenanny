@@ -90,7 +90,7 @@ export default function EventHeader({ event }: EventHeaderProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
-              <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-sm">
+              <div className="icon-chip-sm bg-primary">
                 <Utensils className="text-white h-4 w-4" />
               </div>
               <div>
@@ -144,7 +144,7 @@ export default function EventHeader({ event }: EventHeaderProps) {
                   }
                 />
               )}
-              <Button onClick={handleShare} size="sm" className="bg-primary hover:bg-primary/90 rounded-full shadow-sm">
+              <Button onClick={handleShare} size="sm" className="bg-primary hover:bg-primary/90 rounded-full ">
                 <Upload className="mr-2 h-4 w-4" />
                 Share
               </Button>

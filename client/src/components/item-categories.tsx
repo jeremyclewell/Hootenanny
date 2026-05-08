@@ -124,7 +124,7 @@ export default function ItemCategories({ items, eventId }: ItemCategoriesProps) 
         {/* Category header */}
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <span className="icon-chip-sm bg-card shadow-sm">
+            <span className="icon-chip-sm bg-card ">
               <CategoryIcon className="h-4 w-4 text-primary" />
             </span>
             <h3 className="font-serif font-semibold text-foreground text-lg">{cfg.name}</h3>
@@ -148,7 +148,7 @@ export default function ItemCategories({ items, eventId }: ItemCategoriesProps) 
                 className={`flex items-center justify-between rounded-xl p-3 transition-all duration-200 ${
                   claimed
                     ? "bg-sage-50 cursor-default"
-                    : "bg-card hover:shadow-sm cursor-pointer"
+                    : "bg-card hover:bg-accent/40 cursor-pointer"
                 }`}
                 data-testid={`item-${item.id}`}
               >
@@ -177,7 +177,7 @@ export default function ItemCategories({ items, eventId }: ItemCategoriesProps) 
                     <Button
                       size="sm"
                       onClick={() => handleClaimItem(item)}
-                      className="bg-primary hover:bg-primary/90 rounded-full px-4 h-8 text-xs shadow-sm"
+                      className="bg-primary hover:bg-primary/90 rounded-full px-4 h-8 text-xs "
                       data-testid={`button-claim-${item.id}`}
                     >
                       Claim
@@ -247,7 +247,7 @@ export default function ItemCategories({ items, eventId }: ItemCategoriesProps) 
             variant="outline"
             size="sm"
             onClick={() => setExpanded((v) => !v)}
-            className="rounded-full bg-card shadow-sm"
+            className="rounded-full bg-card "
             data-testid="button-toggle-categories"
           >
             {expanded

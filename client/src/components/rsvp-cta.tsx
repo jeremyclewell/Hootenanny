@@ -59,7 +59,7 @@ export default function RsvpCta({ eventId, eventTitle }: RsvpCtaProps) {
         data-testid="rsvp-cta-confirmed"
       >
         <div className="flex items-center gap-3">
-          <span className="icon-chip-md bg-card shadow-sm">
+          <span className="icon-chip-md bg-card ">
             <Icon className={`h-5 w-5 ${status.iconClass}`} />
           </span>
           <div>
@@ -86,7 +86,7 @@ export default function RsvpCta({ eventId, eventTitle }: RsvpCtaProps) {
       data-testid="rsvp-cta-prompt"
     >
       <div className="flex items-center gap-3">
-        <span className="icon-chip-md bg-primary text-white shadow-sm">
+        <span className="icon-chip-md bg-primary text-white ">
           <MailCheck className="h-5 w-5" />
         </span>
         <div>
@@ -97,7 +97,7 @@ export default function RsvpCta({ eventId, eventTitle }: RsvpCtaProps) {
       <RsvpDialog
         eventId={eventId}
         trigger={
-          <Button className="bg-primary hover:bg-primary/90 shadow-sm h-11" data-testid="button-rsvp-cta">
+          <Button className="bg-primary hover:bg-primary/90 h-11" data-testid="button-rsvp-cta">
             <MailCheck className="mr-2 h-4 w-4" />
             RSVP now
           </Button>

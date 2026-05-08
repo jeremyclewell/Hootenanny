@@ -146,7 +146,7 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
     <div className="space-y-6">
       {/* Status banner */}
       <div className="flex items-start gap-3 surface-callout border-teal-100 bg-teal-50 p-5">
-        <span className="icon-chip-sm bg-card shadow-sm">
+        <span className="icon-chip-sm bg-card ">
           <CalendarCheck className="h-4 w-4 text-teal-500" />
         </span>
         <div>
@@ -220,7 +220,7 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
                 })}
               </div>
 
-              <Button type="submit" className="w-full bg-primary hover:bg-primary/90 rounded-full h-12 text-base font-medium shadow-sm" disabled={submitVote.isPending}>
+              <Button type="submit" className="w-full bg-primary hover:bg-primary/90 rounded-full h-12 text-base font-medium " disabled={submitVote.isPending}>
                 <CheckCircle2 className="mr-2 h-4 w-4" />
                 {submitVote.isPending ? "Saving…" : "Save my availability"}
               </Button>
@@ -375,7 +375,7 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
                       size="sm"
                       onClick={() => finalizeMutation.mutate(row.date)}
                       disabled={finalizeMutation.isPending}
-                      className={isLeader ? "bg-sage-600 hover:bg-sage-700 text-white shadow-sm" : ""}
+                      className={isLeader ? "bg-sage-600 hover:bg-sage-700 text-white " : ""}
                       variant={isLeader ? "default" : "outline"}
                     >
                       Finalize this date

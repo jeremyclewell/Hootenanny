@@ -107,7 +107,7 @@ export default function CreateEvent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-sm">
+              <div className="icon-chip-sm bg-primary">
                 <Utensils className="text-white h-4 w-4" />
               </div>
               <span className="text-lg font-serif font-semibold text-foreground">Hootenanny</span>
@@ -440,7 +440,7 @@ export default function CreateEvent() {
 
                 <Button
                   type="submit"
-                  className="w-full bg-primary hover:bg-primary/90 rounded-full h-12 text-base font-medium shadow-sm"
+                  className="w-full bg-primary hover:bg-primary/90 rounded-full h-12 text-base font-medium "
                   disabled={createEventMutation.isPending}
                 >
                   <PartyPopper className="mr-2 h-5 w-5" />

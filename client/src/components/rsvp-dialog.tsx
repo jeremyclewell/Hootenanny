@@ -342,7 +342,7 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
             type="button"
             onClick={handleSave}
             disabled={busy || !response}
-            className="w-full bg-primary hover:bg-primary/90 rounded-full h-12 text-base font-medium shadow-sm"
+            className="w-full bg-primary hover:bg-primary/90 rounded-full h-12 text-base font-medium "
             data-testid="button-save-rsvp"
           >
             {submit.isPending ? "Saving…" : ctaLabel}
