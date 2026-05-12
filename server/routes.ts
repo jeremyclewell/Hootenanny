@@ -661,6 +661,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!canViewEvent(req, event)) return respondDraftHidden(res);
 
       const comment = submitCommentSchema.parse(req.body);
+
+      // RSVP gate: non-owners must have RSVPd (skip during polling — no RSVPs yet)
+      if (!isOwner(req, event) && event.pollStatus !== "polling") {
+        const rsvps = await storage.getEventRsvps(event.id);
+        const norm = (s: string) => s.trim().toLowerCase();
+        const hasRsvp = rsvps.some((r) => norm(r.guestName) === norm(comment.authorName));
+        if (!hasRsvp) return res.status(403).json({ message: "rsvp_required" });
+      }
+
       const created = await storage.addItemComment(itemId, item.eventId, comment);
       broadcastToEvent(item.eventId, { type: "itemCommentAdded", comment: created });
       res.json(created);
@@ -719,6 +728,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!canViewEvent(req, event)) return respondDraftHidden(res);
 
       const comment = submitCommentSchema.parse(req.body);
+
+      // RSVP gate: non-owners must have RSVPd (skip during polling — no RSVPs yet)
+      if (!isOwner(req, event) && event.pollStatus !== "polling") {
+        const rsvps = await storage.getEventRsvps(event.id);
+        const norm = (s: string) => s.trim().toLowerCase();
+        const hasRsvp = rsvps.some((r) => norm(r.guestName) === norm(comment.authorName));
+        if (!hasRsvp) return res.status(403).json({ message: "rsvp_required" });
+      }
+
       const created = await storage.addEventComment(req.params.id, comment);
       broadcastToEvent(req.params.id, { type: "eventCommentAdded", comment: created });
       res.json(created);

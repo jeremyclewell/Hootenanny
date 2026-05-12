@@ -8,11 +8,15 @@ import { getCategory } from "@/lib/categories";
 import type { Item, ItemComment } from "@shared/schema";
 import ItemComments from "@/components/item-comments";
 
+interface GuestRsvp { guestName: string; }
+
 interface ItemCategoriesProps {
   items: Item[];
   eventId: string;
   itemComments: ItemComment[];
   isHost: boolean;
+  isPolling: boolean;
+  rsvps: GuestRsvp[];
 }
 
 /** First-name + last-initial helper for "Anya P. is bringing this" style. */
@@ -22,7 +26,7 @@ function shortName(name: string) {
   return `${parts[0]} ${parts[parts.length - 1].charAt(0).toUpperCase()}.`;
 }
 
-export default function ItemCategories({ items, eventId, itemComments, isHost }: ItemCategoriesProps) {
+export default function ItemCategories({ items, eventId, itemComments, isHost, isPolling, rsvps }: ItemCategoriesProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
@@ -238,6 +242,8 @@ export default function ItemCategories({ items, eventId, itemComments, isHost }:
                     eventId={eventId}
                     comments={commentsForItem}
                     isHost={isHost}
+                    isPolling={isPolling}
+                    rsvps={rsvps}
                   />
                 </div>
               </div>

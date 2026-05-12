@@ -5,11 +5,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MessageSquare, Send, Trash2, Crown } from "lucide-react";
+import { MessageSquare, Send, Trash2, Crown, LogIn } from "lucide-react";
 import type { EventComment, Event } from "@shared/schema";
-import { getGuestName, setGuestName } from "@/lib/guest-storage";
+import { getGuestName } from "@/lib/guest-storage";
+import RsvpDialog from "@/components/rsvp-dialog";
 
 function timeAgo(date: string | Date) {
   const d = typeof date === "string" ? new Date(date) : date;
@@ -20,38 +20,41 @@ function timeAgo(date: string | Date) {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
+interface GuestRsvp { guestName: string; }
+
 interface EventDiscussionProps {
   event: Event;
   isHost: boolean;
+  rsvps: GuestRsvp[];
 }
 
-export default function EventDiscussion({ event, isHost }: EventDiscussionProps) {
+export default function EventDiscussion({ event, isHost, rsvps }: EventDiscussionProps) {
   const { toast } = useToast();
   const { user } = useAuth();
-
   const [content, setContent] = useState("");
-  const [authorName, setAuthorName] = useState(() => {
-    if (user) return [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "";
-    return getGuestName();
-  });
+
+  const isPolling = event.pollStatus === "polling";
+
+  // Derive name from auth or stored RSVP name — no manual input
+  const authName = user ? ([user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "") : "";
+  const [guestName, setGuestDisplayName] = useState(() => user ? authName : getGuestName());
 
   useEffect(() => {
-    if (user) {
-      setAuthorName([user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "");
-    }
-  }, [user]);
-
-  // Keep guest name in sync with other dialogs that may have saved it
-  useEffect(() => {
-    if (user) return;
+    if (user) { setGuestDisplayName(authName); return; }
+    // Sync with other tabs / components that update guest-storage
     const onStorage = (e: StorageEvent) => {
-      if (e.key === "hootenanny-guest-name" && e.newValue) {
-        setAuthorName(e.newValue);
-      }
+      if (e.key === "hootenanny-guest-name" && e.newValue) setGuestDisplayName(e.newValue);
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, [user]);
+  }, [user, authName]);
+
+  const effectiveName = user ? authName : guestName;
+
+  // Has this person RSVPd? (hosts bypass; polling events have no RSVPs yet)
+  const hasRsvp = isHost || isPolling || rsvps.some(
+    (r) => r.guestName.trim().toLowerCase() === effectiveName.trim().toLowerCase()
+  );
 
   const commentsQuery = useQuery<EventComment[]>({
     queryKey: [`/api/events/${event.id}/comments`],
@@ -63,13 +66,12 @@ export default function EventDiscussion({ event, isHost }: EventDiscussionProps)
   const addComment = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", `/api/events/${event.id}/comments`, {
-        authorName: authorName.trim(),
+        authorName: effectiveName.trim(),
         content: content.trim(),
       });
       return res.json();
     },
     onSuccess: () => {
-      setGuestName(authorName.trim());
       setContent("");
       invalidate();
     },
@@ -78,7 +80,7 @@ export default function EventDiscussion({ event, isHost }: EventDiscussionProps)
 
   const deleteComment = useMutation({
     mutationFn: async (commentId: number) => {
-      await apiRequest("DELETE", `/api/event-comments/${commentId}`, { authorName });
+      await apiRequest("DELETE", `/api/event-comments/${commentId}`, { authorName: effectiveName });
     },
     onSuccess: invalidate,
     onError: () => toast({ title: "Could not delete comment", variant: "destructive" }),
@@ -86,10 +88,6 @@ export default function EventDiscussion({ event, isHost }: EventDiscussionProps)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!authorName.trim()) {
-      toast({ title: "Please enter your name first", variant: "destructive" });
-      return;
-    }
     if (!content.trim()) return;
     addComment.mutate();
   };
@@ -128,24 +126,22 @@ export default function EventDiscussion({ event, isHost }: EventDiscussionProps)
       {comments.length > 0 && (
         <div className="mb-6 space-y-3">
           {comments.map((c) => {
-            const isAuthor = isHost; // host can always delete
-            const isOwnComment = c.authorName.trim().toLowerCase() === authorName.trim().toLowerCase();
-            const canDelete = isAuthor || isOwnComment;
+            const isOwnComment = c.authorName.trim().toLowerCase() === effectiveName.trim().toLowerCase();
+            const canDelete = isHost || isOwnComment;
+            const isHostComment = isHost && c.authorName.trim().toLowerCase() === effectiveName.trim().toLowerCase();
             return (
               <div
                 key={c.id}
                 className="flex items-start gap-3 group rounded-2xl border border-border bg-card p-4"
                 data-testid={`event-comment-${c.id}`}
               >
-                {/* Avatar */}
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-terracotta-50 text-sm font-semibold text-primary">
                   {c.authorName[0]?.toUpperCase()}
                 </div>
-
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     <span className="text-sm font-semibold text-foreground">{c.authorName}</span>
-                    {c.authorName.trim().toLowerCase() === ([user?.firstName, user?.lastName].filter(Boolean).join(" ") || "").trim().toLowerCase() && isHost && (
+                    {isHostComment && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-sand-100 px-2 py-0.5 text-[10px] font-medium text-sand-600">
                         <Crown className="h-2.5 w-2.5" /> Host
                       </span>
@@ -154,7 +150,6 @@ export default function EventDiscussion({ event, isHost }: EventDiscussionProps)
                   </div>
                   <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{c.content}</p>
                 </div>
-
                 {canDelete && (
                   <button
                     onClick={() => deleteComment.mutate(c.id)}
@@ -171,43 +166,61 @@ export default function EventDiscussion({ event, isHost }: EventDiscussionProps)
         </div>
       )}
 
-      {/* Compose */}
-      <form onSubmit={handleSubmit} className="space-y-3">
-        {!user && (
-          <Input
-            placeholder="Your name"
-            value={authorName}
-            onChange={(e) => setAuthorName(e.target.value)}
-            onFocus={() => {
-              const stored = getGuestName();
-              if (stored && stored !== authorName) setAuthorName(stored);
-            }}
-            className="rounded-xl"
-            data-testid="discussion-author-name"
+      {/* RSVP gate or compose box */}
+      {!hasRsvp ? (
+        <div className="flex items-center gap-4 rounded-2xl border border-dashed border-border bg-muted/30 p-5">
+          <span className="icon-chip-md bg-terracotta-50 shrink-0">
+            <LogIn className="h-5 w-5 text-primary" />
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-foreground">RSVP to join the discussion</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Let the host know you're coming, then you can ask questions and leave notes.
+            </p>
+          </div>
+          <RsvpDialog
+            eventId={event.id}
+            trigger={
+              <Button
+                size="sm"
+                className="rounded-full shrink-0 bg-coral-gradient hover:opacity-90 shadow-coral border-0 text-white"
+                data-testid="button-rsvp-to-comment"
+              >
+                RSVP now
+              </Button>
+            }
           />
-        )}
-        <div className="flex gap-3 items-end">
-          <Textarea
-            placeholder="Ask a question or leave a note for the host…"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(e as any); }
-            }}
-            className="min-h-[80px] rounded-xl flex-1 resize-none"
-            data-testid="discussion-content"
-          />
-          <Button
-            type="submit"
-            className="rounded-full h-11 w-11 p-0 bg-coral-gradient hover:opacity-90 shadow-coral border-0 text-white shrink-0"
-            disabled={addComment.isPending || !content.trim()}
-            aria-label="Post"
-            data-testid="button-post-comment"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
         </div>
-      </form>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-3">
+          {effectiveName && (
+            <p className="text-xs text-muted-foreground">
+              Commenting as <span className="font-semibold text-foreground">{effectiveName}</span>
+            </p>
+          )}
+          <div className="flex gap-3 items-end">
+            <Textarea
+              placeholder="Ask a question or leave a note for the host…"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(e as any); }
+              }}
+              className="min-h-[80px] rounded-xl flex-1 resize-none"
+              data-testid="discussion-content"
+            />
+            <Button
+              type="submit"
+              className="rounded-full h-11 w-11 p-0 bg-coral-gradient hover:opacity-90 shadow-coral border-0 text-white shrink-0"
+              disabled={addComment.isPending || !content.trim()}
+              aria-label="Post"
+              data-testid="button-post-comment"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

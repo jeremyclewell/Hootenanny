@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, Hourglass, Utensils } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import type { Event, Item, ItemComment } from "@shared/schema";
+import type { Event, Item, ItemComment, Rsvp } from "@shared/schema";
 
 export default function EventPage() {
   const { id } = useParams();
@@ -58,6 +58,12 @@ export default function EventPage() {
 
   const itemCommentsQuery = useQuery<ItemComment[]>({
     queryKey: [`/api/events/${id}/item-comments`],
+    enabled: !!id && !!event,
+  });
+
+  // Fetch RSVPs so we can gate commenting on RSVP status
+  const rsvpsQuery = useQuery<Rsvp[]>({
+    queryKey: [`/api/events/${id}/rsvps`],
     enabled: !!id && !!event,
   });
 
@@ -147,6 +153,7 @@ export default function EventPage() {
 
   const items = itemsQuery.data || [];
   const allItemComments = itemCommentsQuery.data || [];
+  const rsvps = rsvpsQuery.data || [];
 
   const itemsSection = (
     <div className="mt-8 space-y-4">
@@ -156,6 +163,8 @@ export default function EventPage() {
         eventId={event!.id}
         itemComments={allItemComments}
         isHost={isHost}
+        isPolling={!!isPolling}
+        rsvps={rsvps}
       />
     </div>
   );
@@ -170,7 +179,7 @@ export default function EventPage() {
             <PollView event={event!} isHost={isHost} />
           </div>
           {itemsSection}
-          <EventDiscussion event={event!} isHost={isHost} />
+          <EventDiscussion event={event!} isHost={isHost} rsvps={rsvps} />
           <ClaimItemModal />
           <EditItemModal />
         </main>
@@ -187,7 +196,7 @@ export default function EventPage() {
         {isHost && event!.pollStatus === "finalized" && <ReopenPollBanner event={event!} />}
         {!isDraft && <RsvpList eventId={event!.id} isHost={isHost} />}
         {itemsSection}
-        <EventDiscussion event={event!} isHost={isHost} />
+        <EventDiscussion event={event!} isHost={isHost} rsvps={rsvps} />
         <ClaimItemModal />
         <EditItemModal />
       </main>

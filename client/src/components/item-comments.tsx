@@ -5,10 +5,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { MessageCircle, Send, Trash2, ChevronDown } from "lucide-react";
+import { MessageCircle, Send, Trash2, ChevronDown, LogIn } from "lucide-react";
 import type { ItemComment } from "@shared/schema";
-import { getGuestName, setGuestName } from "@/lib/guest-storage";
+import { getGuestName } from "@/lib/guest-storage";
+import RsvpDialog from "@/components/rsvp-dialog";
 
 function timeAgo(date: string | Date) {
   const d = typeof date === "string" ? new Date(date) : date;
@@ -19,37 +19,41 @@ function timeAgo(date: string | Date) {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
+interface GuestRsvp { guestName: string; }
+
 interface ItemCommentsProps {
   itemId: number;
   eventId: string;
   comments: ItemComment[];
   isHost: boolean;
+  isPolling: boolean;
+  rsvps: GuestRsvp[];
 }
 
-export default function ItemComments({ itemId, eventId, comments, isHost }: ItemCommentsProps) {
+export default function ItemComments({ itemId, eventId, comments, isHost, isPolling, rsvps }: ItemCommentsProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [content, setContent] = useState("");
-  const [authorName, setAuthorName] = useState(() => {
-    if (user) return [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "";
-    return getGuestName();
-  });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
-    if (user) {
-      setAuthorName([user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "");
-    }
-  }, [user]);
+  // Derive authorName from auth session or RSVP stored name — never a manual input
+  const authorName = user
+    ? ([user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "")
+    : getGuestName();
 
-  // Refresh name from shared storage each time the panel is opened (guest only)
+  // Re-read from localStorage each time the thread opens (another component may have saved a new name)
+  const [guestName, setGuestName] = useState(authorName);
   useEffect(() => {
-    if (open && !user) {
-      const stored = getGuestName();
-      if (stored) setAuthorName(stored);
-    }
+    if (open && !user) setGuestName(getGuestName());
   }, [open, user]);
+
+  const effectiveName = user ? authorName : guestName;
+
+  // Has this person RSVPd? (hosts bypass; polling events have no RSVPs yet)
+  const hasRsvp = isHost || isPolling || rsvps.some(
+    (r) => r.guestName.trim().toLowerCase() === effectiveName.trim().toLowerCase()
+  );
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/item-comments`] });
@@ -57,33 +61,28 @@ export default function ItemComments({ itemId, eventId, comments, isHost }: Item
   const addComment = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", `/api/items/${itemId}/comments`, {
-        authorName: authorName.trim(),
+        authorName: effectiveName.trim(),
         content: content.trim(),
       });
       return res.json();
     },
     onSuccess: () => {
-      setGuestName(authorName.trim());
       setContent("");
       invalidate();
     },
-    onError: () => toast({ title: "Could not post comment", variant: "destructive" }),
+    onError: () => toast({ title: "Could not post note", variant: "destructive" }),
   });
 
   const deleteComment = useMutation({
     mutationFn: async (commentId: number) => {
-      await apiRequest("DELETE", `/api/item-comments/${commentId}`, { authorName });
+      await apiRequest("DELETE", `/api/item-comments/${commentId}`, { authorName: effectiveName });
     },
     onSuccess: invalidate,
-    onError: () => toast({ title: "Could not delete comment", variant: "destructive" }),
+    onError: () => toast({ title: "Could not delete note", variant: "destructive" }),
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!authorName.trim()) {
-      toast({ title: "Please enter your name first", variant: "destructive" });
-      return;
-    }
     if (!content.trim()) return;
     addComment.mutate();
   };
@@ -110,7 +109,7 @@ export default function ItemComments({ itemId, eventId, comments, isHost }: Item
           className="mt-2 rounded-xl border border-border bg-background/80 p-3 space-y-3"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Existing comments */}
+          {/* Existing comments — always visible */}
           {comments.length > 0 && (
             <div className="space-y-2">
               {comments.map((c) => (
@@ -125,11 +124,11 @@ export default function ItemComments({ itemId, eventId, comments, isHost }: Item
                     </div>
                     <p className="text-xs text-foreground leading-relaxed mt-0.5">{c.content}</p>
                   </div>
-                  {(isHost || c.authorName.trim().toLowerCase() === authorName.trim().toLowerCase()) && (
+                  {(isHost || c.authorName.trim().toLowerCase() === effectiveName.trim().toLowerCase()) && (
                     <button
                       onClick={() => deleteComment.mutate(c.id)}
                       className="shrink-0 opacity-0 group-hover:opacity-100 rounded p-0.5 text-muted-foreground hover:text-destructive transition-all"
-                      aria-label="Delete comment"
+                      aria-label="Delete note"
                     >
                       <Trash2 className="h-3 w-3" />
                     </button>
@@ -139,38 +138,53 @@ export default function ItemComments({ itemId, eventId, comments, isHost }: Item
             </div>
           )}
 
-          {/* Compose */}
-          <form onSubmit={handleSubmit} className="space-y-2">
-            {!user && (
-              <Input
-                placeholder="Your name"
-                value={authorName}
-                onChange={(e) => setAuthorName(e.target.value)}
-                className="h-8 text-xs rounded-lg"
+          {/* RSVP gate */}
+          {!hasRsvp ? (
+            <div className="flex items-center gap-3 rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2.5">
+              <LogIn className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground flex-1">
+                RSVP to this event to leave notes.
+              </p>
+              <RsvpDialog
+                eventId={eventId}
+                trigger={
+                  <Button size="sm" variant="outline" className="rounded-full h-7 px-3 text-xs shrink-0">
+                    RSVP
+                  </Button>
+                }
               />
-            )}
-            <div className="flex gap-2">
-              <Textarea
-                ref={textareaRef}
-                placeholder="Leave a note…"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(e as any); }
-                }}
-                className="min-h-[60px] text-xs rounded-lg resize-none flex-1"
-              />
-              <Button
-                type="submit"
-                size="sm"
-                className="self-end rounded-full h-8 w-8 p-0 bg-primary hover:bg-primary/90"
-                disabled={addComment.isPending || !content.trim()}
-                aria-label="Post comment"
-              >
-                <Send className="h-3.5 w-3.5" />
-              </Button>
             </div>
-          </form>
+          ) : (
+            /* Compose */
+            <form onSubmit={handleSubmit} className="space-y-2">
+              {effectiveName && (
+                <p className="text-[11px] text-muted-foreground">
+                  Commenting as <span className="font-semibold text-foreground">{effectiveName}</span>
+                </p>
+              )}
+              <div className="flex gap-2">
+                <Textarea
+                  ref={textareaRef}
+                  placeholder="Leave a note…"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(e as any); }
+                  }}
+                  className="min-h-[60px] text-xs rounded-lg resize-none flex-1"
+                />
+                <Button
+                  type="submit"
+                  size="sm"
+                  className="self-end rounded-full h-8 w-8 p-0 bg-primary hover:bg-primary/90"
+                  disabled={addComment.isPending || !content.trim()}
+                  aria-label="Post note"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </form>
+          )}
         </div>
       )}
     </div>
