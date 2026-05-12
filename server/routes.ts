@@ -20,14 +20,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // WebSocket server for real-time updates
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 
-  const clients = new Map<WebSocket, string>(); // WebSocket -> eventId
+  const clients = new Map<WebSocket, Set<string>>(); // WebSocket -> Set of eventIds
 
   wss.on('connection', (ws) => {
+    clients.set(ws, new Set());
+
     ws.on('message', (data) => {
       try {
         const message = JSON.parse(data.toString());
         if (message.type === 'join' && message.eventId) {
-          clients.set(ws, message.eventId);
+          clients.get(ws)?.add(message.eventId);
         }
       } catch (error) {
         console.error('WebSocket message error:', error);
@@ -41,8 +43,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Broadcast updates to all clients watching an event
   function broadcastToEvent(eventId: string, data: any) {
-    clients.forEach((watchedEventId, client) => {
-      if (watchedEventId === eventId && client.readyState === WebSocket.OPEN) {
+    clients.forEach((watchedEventIds, client) => {
+      if (watchedEventIds.has(eventId) && client.readyState === WebSocket.OPEN) {
         client.send(JSON.stringify(data));
       }
     });

@@ -12,6 +12,7 @@ import AuthButton from "@/components/auth-button";
 import { format } from "date-fns";
 import { parseLocalDate } from "@/lib/calendar";
 import type { Event } from "@shared/schema";
+import { useWebSocketMulti } from "@/lib/websocket";
 
 export default function MyEvents() {
   const [, setLocation] = useLocation();
@@ -50,6 +51,16 @@ export default function MyEvents() {
 
   const events = eventsQuery.data || [];
   const commentCounts = commentCountsQuery.data || {};
+
+  const eventIds = events.map((e) => e.id);
+  const { lastMessage } = useWebSocketMulti(eventIds);
+
+  useEffect(() => {
+    if (!lastMessage) return;
+    if (["eventCommentAdded", "itemCommentAdded"].includes(lastMessage.type)) {
+      queryClient.invalidateQueries({ queryKey: ["/api/my/events/comment-counts"] });
+    }
+  }, [lastMessage]);
 
   return (
     <div className="min-h-screen bg-background">
