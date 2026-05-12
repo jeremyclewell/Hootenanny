@@ -9,8 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MessageSquare, Send, Trash2, Crown } from "lucide-react";
 import type { EventComment, Event } from "@shared/schema";
-
-const STORAGE_KEY = "hootenanny-commenter-name";
+import { getGuestName, setGuestName } from "@/lib/guest-storage";
 
 function timeAgo(date: string | Date) {
   const d = typeof date === "string" ? new Date(date) : date;
@@ -33,13 +32,25 @@ export default function EventDiscussion({ event, isHost }: EventDiscussionProps)
   const [content, setContent] = useState("");
   const [authorName, setAuthorName] = useState(() => {
     if (user) return [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "";
-    try { return localStorage.getItem(STORAGE_KEY) || ""; } catch { return ""; }
+    return getGuestName();
   });
 
   useEffect(() => {
     if (user) {
       setAuthorName([user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "");
     }
+  }, [user]);
+
+  // Keep guest name in sync with other dialogs that may have saved it
+  useEffect(() => {
+    if (user) return;
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "hootenanny-guest-name" && e.newValue) {
+        setAuthorName(e.newValue);
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, [user]);
 
   const commentsQuery = useQuery<EventComment[]>({
@@ -58,7 +69,7 @@ export default function EventDiscussion({ event, isHost }: EventDiscussionProps)
       return res.json();
     },
     onSuccess: () => {
-      try { localStorage.setItem(STORAGE_KEY, authorName.trim()); } catch {}
+      setGuestName(authorName.trim());
       setContent("");
       invalidate();
     },
@@ -167,6 +178,10 @@ export default function EventDiscussion({ event, isHost }: EventDiscussionProps)
             placeholder="Your name"
             value={authorName}
             onChange={(e) => setAuthorName(e.target.value)}
+            onFocus={() => {
+              const stored = getGuestName();
+              if (stored && stored !== authorName) setAuthorName(stored);
+            }}
             className="rounded-xl"
             data-testid="discussion-author-name"
           />

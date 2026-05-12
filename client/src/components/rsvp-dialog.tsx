@@ -16,25 +16,18 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Check, HelpCircle, X, Mail, Trash2, Minus, Plus, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Event, Rsvp, RsvpResponse } from "@shared/schema";
+import { getGuestName, getGuestEmail, setGuestName, setGuestEmail } from "@/lib/guest-storage";
 
 interface RsvpDialogProps {
   eventId: string;
   trigger: React.ReactNode;
 }
 
-const STORAGE_KEY = "hootenanny-voter";
 type PublicRsvp = Omit<Rsvp, "guestEmail">;
 interface StoredGuest { name: string; email: string; }
 
 function loadStoredGuest(): StoredGuest {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return { name: parsed.name || "", email: parsed.email || "" };
-    }
-  } catch {}
-  return { name: "", email: "" };
+  return { name: getGuestName(), email: getGuestEmail() };
 }
 
 const RESPONSE_OPTIONS: Array<{
@@ -142,9 +135,8 @@ export default function RsvpDialog({ eventId, trigger }: RsvpDialogProps) {
       return res.json();
     },
     onSuccess: (_data, chosen) => {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ name: guest.name.trim(), email: guest.email.trim() }));
-      } catch {}
+      setGuestName(guest.name.trim());
+      if (guest.email.trim()) setGuestEmail(guest.email.trim());
       queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/rsvps`] });
       const label = RESPONSE_OPTIONS.find((o) => o.value === chosen)?.label ?? "RSVP";
       toast({ title: "RSVP saved!", description: `You're marked as: ${label}.` });

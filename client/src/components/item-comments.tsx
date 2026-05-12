@@ -8,8 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { MessageCircle, Send, Trash2, ChevronDown } from "lucide-react";
 import type { ItemComment } from "@shared/schema";
-
-const STORAGE_KEY = "hootenanny-commenter-name";
+import { getGuestName, setGuestName } from "@/lib/guest-storage";
 
 function timeAgo(date: string | Date) {
   const d = typeof date === "string" ? new Date(date) : date;
@@ -34,7 +33,7 @@ export default function ItemComments({ itemId, eventId, comments, isHost }: Item
   const [content, setContent] = useState("");
   const [authorName, setAuthorName] = useState(() => {
     if (user) return [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "";
-    try { return localStorage.getItem(STORAGE_KEY) || ""; } catch { return ""; }
+    return getGuestName();
   });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -43,6 +42,14 @@ export default function ItemComments({ itemId, eventId, comments, isHost }: Item
       setAuthorName([user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "");
     }
   }, [user]);
+
+  // Refresh name from shared storage each time the panel is opened (guest only)
+  useEffect(() => {
+    if (open && !user) {
+      const stored = getGuestName();
+      if (stored) setAuthorName(stored);
+    }
+  }, [open, user]);
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/item-comments`] });
@@ -56,7 +63,7 @@ export default function ItemComments({ itemId, eventId, comments, isHost }: Item
       return res.json();
     },
     onSuccess: () => {
-      try { localStorage.setItem(STORAGE_KEY, authorName.trim()); } catch {}
+      setGuestName(authorName.trim());
       setContent("");
       invalidate();
     },

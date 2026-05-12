@@ -11,6 +11,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { getCategory } from "@/lib/categories";
 import { UtensilsCrossed, Hand } from "lucide-react";
+import { getGuestName, getGuestEmail, setGuestName, setGuestEmail } from "@/lib/guest-storage";
 
 export default function ClaimItemModal() {
   const [isOpen, setIsOpen] = useState(false);
@@ -26,13 +27,13 @@ export default function ClaimItemModal() {
   });
 
   useEffect(() => {
-    const savedName = localStorage.getItem('potluck-user-name');
-    const savedEmail = localStorage.getItem('potluck-user-email');
+    const savedName = getGuestName();
+    const savedEmail = getGuestEmail();
 
     if (savedName || savedEmail) {
       form.reset({
-        name: savedName || "",
-        email: savedEmail || "",
+        name: savedName,
+        email: savedEmail,
       });
     }
   }, [form]);
@@ -98,9 +99,7 @@ export default function ClaimItemModal() {
       const detail = (event as CustomEvent<Item>).detail;
       setSelectedItem(detail);
       setIsOpen(true);
-      const savedName = localStorage.getItem("potluck-user-name");
-      const savedEmail = localStorage.getItem("potluck-user-email");
-      formRef.current.reset({ name: savedName || "", email: savedEmail || "" });
+      formRef.current.reset({ name: getGuestName(), email: getGuestEmail() });
     };
 
     const handleAutoClaimItem = (event: Event) => {
@@ -119,10 +118,8 @@ export default function ClaimItemModal() {
   }, []);
 
   const onSubmit = (data: ClaimItem) => {
-    localStorage.setItem('potluck-user-name', data.name);
-    if (data.email) {
-      localStorage.setItem('potluck-user-email', data.email);
-    }
+    setGuestName(data.name);
+    if (data.email) setGuestEmail(data.email);
     claimItemMutation.mutate(data);
   };
 
