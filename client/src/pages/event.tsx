@@ -37,7 +37,7 @@ export default function EventPage() {
 
   const itemsQuery = useQuery<Item[]>({
     queryKey: [`/api/events/${id}/items`],
-    enabled: !!id && !isPolling && !!event,
+    enabled: !!id && !!event,
   });
 
   useEffect(() => {
@@ -129,15 +129,23 @@ export default function EventPage() {
   const items = itemsQuery.data || [];
 
   // ─── Polling mode: date not yet confirmed ────────────────────────────────
-  // Show only the event header and the date poll. Nothing else is actionable
-  // until the host locks in a date.
+  // Show the date poll AND the potluck item list so the host can prep the
+  // menu while guests are voting. Guests can also browse (and claim) items.
   if (isPolling) {
     return (
       <>
         <div className="min-h-screen relative" style={{ zIndex: 1 }}>
           <EventHeader event={event!} isHost={isHost} />
-          <main className="max-w-2xl mx-auto px-4 sm:px-6 pb-16">
-            <PollView event={event!} isHost={isHost} />
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+            <div className="max-w-2xl">
+              <PollView event={event!} isHost={isHost} />
+            </div>
+            <div className="mt-8 space-y-4">
+              <AddCustomItem eventId={event!.id} />
+              <ItemCategories items={items} eventId={event!.id} />
+            </div>
+            <ClaimItemModal />
+            <EditItemModal />
           </main>
         </div>
       </>
