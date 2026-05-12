@@ -6,7 +6,7 @@ import { insertEventSchema, customItemSchema, claimItemSchema, editItemSchema, s
 import { getThemeItems } from "../client/src/lib/theme-items";
 import { setupAuth, isAuthenticated, registerAuthRoutes } from "./replit_integrations/auth";
 import { authStorage } from "./replit_integrations/auth/storage";
-import { sendRsvpConfirmation, sendHostRsvpNotification, sendItemClaimConfirmation } from "./email";
+import { sendRsvpConfirmation, sendHostRsvpNotification, sendItemClaimConfirmation, sendHostCommentNotification, type PendingComment } from "./email";
 
 function getUserId(req: any): string | undefined {
   return req.user?.claims?.sub;
@@ -70,6 +70,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Standard 403 for draft events viewed by non-owners
   function respondDraftHidden(res: Response) {
     return res.status(403).json({ message: "Event is not published yet", status: "draft" });
+  }
+
+  // ── Comment email debounce ────────────────────────────────────────────────────
+  // Groups rapid-fire comments per event into a single digest email sent after
+  // a short quiet period (COMMENT_DEBOUNCE_MS). If the commenter IS the host we
+  // skip the notification entirely (they know what they wrote).
+
+  const COMMENT_DEBOUNCE_MS = 5 * 60 * 1000; // 5 minutes
+
+  interface PendingEmailEntry {
+    timer: ReturnType<typeof setTimeout>;
+    comments: PendingComment[];
+    event: { id: string; title: string };
+    ownerId: string;
+    reqSnapshot: { protocol: string; hostname: string };
+  }
+
+  const pendingCommentEmails = new Map<string, PendingEmailEntry>();
+
+  function queueCommentNotification(
+    eventId: string,
+    event: { id: string; title: string; ownerId: string },
+    comment: PendingComment,
+    commenterUserId: string | undefined,
+    reqSnapshot: { protocol: string; hostname: string },
+  ) {
+    // Skip if the host is commenting on their own event
+    if (commenterUserId && commenterUserId === event.ownerId) return;
+
+    const existing = pendingCommentEmails.get(eventId);
+    if (existing) {
+      clearTimeout(existing.timer);
+      existing.comments.push(comment);
+    }
+
+    const comments = existing ? existing.comments : [comment];
+    const ownerId = event.ownerId;
+
+    const timer = setTimeout(async () => {
+      pendingCommentEmails.delete(eventId);
+      try {
+        const hostUser = await authStorage.getUser(ownerId);
+        if (!hostUser?.email) return;
+        const hostName = [hostUser.firstName, hostUser.lastName].filter(Boolean).join(" ") || hostUser.email;
+        await sendHostCommentNotification({
+          hostEmail: hostUser.email,
+          hostName,
+          event,
+          comments,
+          req: reqSnapshot,
+        });
+      } catch (err) {
+        console.error("[email] Comment notification error:", err);
+      }
+    }, COMMENT_DEBOUNCE_MS);
+
+    pendingCommentEmails.set(eventId, { timer, comments, event, ownerId, reqSnapshot });
   }
 
   // Create new event (requires login)
@@ -757,6 +814,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const created = await storage.addItemComment(itemId, item.eventId, comment);
       broadcastToEvent(item.eventId, { type: "itemCommentAdded", comment: created });
       res.json(created);
+
+      // Queue host notification (fire-and-forget, debounced)
+      queueCommentNotification(
+        item.eventId,
+        event,
+        { type: "item", authorName: comment.authorName, content: comment.content, itemName: item.name },
+        getUserId(req),
+        { protocol: req.protocol, hostname: req.hostname },
+      );
     } catch {
       res.status(400).json({ message: "Invalid comment data" });
     }
@@ -834,6 +900,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const created = await storage.addEventComment(req.params.id, comment, parentId);
       broadcastToEvent(req.params.id, { type: "eventCommentAdded", comment: created });
       res.json(created);
+
+      // Queue host notification (fire-and-forget, debounced)
+      queueCommentNotification(
+        req.params.id,
+        event,
+        { type: "event", authorName: comment.authorName, content: comment.content },
+        getUserId(req),
+        { protocol: req.protocol, hostname: req.hostname },
+      );
     } catch {
       res.status(400).json({ message: "Invalid comment data" });
     }

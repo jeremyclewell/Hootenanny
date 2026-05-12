@@ -257,3 +257,84 @@ export async function sendItemClaimConfirmation(opts: {
     console.error("[email] Failed to send item claim confirmation:", err);
   }
 }
+
+// ── HTML escaping helper ───────────────────────────────────────────────────────
+
+function esc(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// ── Email: comment digest to host ─────────────────────────────────────────────
+
+export interface PendingComment {
+  type: "item" | "event";
+  authorName: string;
+  content: string;
+  itemName?: string;
+}
+
+export async function sendHostCommentNotification(opts: {
+  hostEmail: string;
+  hostName: string;
+  event: { id: string; title: string };
+  comments: PendingComment[];
+  req: { protocol: string; hostname: string };
+}) {
+  const resend = await getResendClient();
+  if (!resend) return;
+
+  const { hostEmail, hostName, event, comments, req } = opts;
+  const count = comments.length;
+  const plural = count === 1 ? "comment" : "comments";
+
+  const rows = comments
+    .map((c) => {
+      const location = c.type === "item" && c.itemName ? `Item: ${esc(c.itemName)}` : "Event discussion";
+      const raw = c.content.length > 160 ? c.content.slice(0, 157) + "…" : c.content;
+      const snippet = esc(raw);
+      return `
+      <div style="background:#f8f5f0;border-radius:12px;padding:14px 18px;margin-bottom:12px;">
+        <div style="font-size:12px;color:#888;margin-bottom:6px;">${location}</div>
+        <div style="font-size:14px;color:#1a1a1a;font-weight:600;margin-bottom:4px;">${esc(c.authorName)}</div>
+        <div style="font-size:14px;color:#444;line-height:1.5;">${snippet}</div>
+      </div>`;
+    })
+    .join("");
+
+  const subject =
+    count === 1
+      ? `${comments[0].authorName} commented on ${event.title}`
+      : `${count} new ${plural} on ${event.title}`;
+
+  const html = baseTemplate(`
+  <div class="hero">
+    <div class="logo">🪕 Hootenanny</div>
+    <h1>${count} new ${plural} on your event</h1>
+  </div>
+  <div class="body">
+    <p style="margin:0 0 20px;font-size:15px;color:#444;">
+      Hey <strong>${esc(hostName)}</strong>, here's what's new on <strong>${esc(event.title)}</strong>:
+    </p>
+    ${rows}
+    <a href="${eventUrl(event.id, req)}" class="cta">View event</a>
+  </div>
+  <div class="footer">
+    You're receiving this as the host of this Hootenanny event.
+  </div>`);
+
+  try {
+    await resend.client.emails.send({
+      from: resend.fromEmail,
+      to: hostEmail,
+      subject,
+      html,
+    });
+  } catch (err) {
+    console.error("[email] Failed to send host comment notification:", err);
+  }
+}
