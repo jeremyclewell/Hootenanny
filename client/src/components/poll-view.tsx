@@ -9,12 +9,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as DateCalendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { CalendarCheck, CalendarPlus, CheckCircle2, Clock, Crown, Hourglass, Plus, Trophy, Users } from "lucide-react";
+import { CalendarCheck, CalendarPlus, CalendarRange, CheckCircle2, Clock, Crown, Hourglass, Plus, Trophy, Users } from "lucide-react";
 import { DURATION_OPTIONS } from "@/lib/duration";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, parseISO } from "date-fns";
-import { pollWindowEnd, startOfToday } from "@/lib/calendar";
+import { parseLocalDate, pollWindowEnd, startOfToday } from "@/lib/calendar";
 import type { Event, DateVote } from "@shared/schema";
+
+type FinalizeTimeMode = "duration" | "range";
 
 interface PollViewProps {
   event: Event;
@@ -42,6 +44,10 @@ export default function PollView({ event, isHost }: PollViewProps) {
   const [hydrated, setHydrated] = useState(false);
   const [finalizeTime, setFinalizeTime] = useState<string>("");
   const [finalizeDuration, setFinalizeDuration] = useState<number>(event.durationMinutes ?? 120);
+  const [finalizeTimeMode, setFinalizeTimeMode] = useState<FinalizeTimeMode>("duration");
+  const [finalizeEndDate, setFinalizeEndDate] = useState<string>("");
+  const [finalizeEndTime, setFinalizeEndTime] = useState<string>("");
+  const [endDateOpen, setEndDateOpen] = useState(false);
   const [extraDates, setExtraDates] = useState<Date[]>([]);
   const [addOpen, setAddOpen] = useState(false);
 
@@ -96,11 +102,14 @@ export default function PollView({ event, isHost }: PollViewProps) {
 
   const finalizeMutation = useMutation({
     mutationFn: async (date: string) => {
-      const res = await apiRequest("POST", `/api/events/${event.id}/finalize`, {
-        date,
-        time: finalizeTime || null,
-        durationMinutes: finalizeDuration,
-      });
+      const body: Record<string, unknown> = { date, time: finalizeTime || null };
+      if (finalizeTimeMode === "range") {
+        body.endDate = finalizeEndDate || null;
+        body.endTime = finalizeEndTime || null;
+      } else {
+        body.durationMinutes = finalizeDuration;
+      }
+      const res = await apiRequest("POST", `/api/events/${event.id}/finalize`, body);
       return res.json();
     },
     onSuccess: () => {
@@ -164,20 +173,50 @@ export default function PollView({ event, isHost }: PollViewProps) {
           {/* Host-only controls */}
           {isHost && (
             <div className="space-y-3 surface-callout border-sand-200 bg-sand-100 p-4">
-              <div className="flex flex-wrap items-end gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="finalize-time" className="flex items-center gap-2 text-sm">
-                    <Clock className="h-4 w-4" />
-                    Event time (optional)
-                  </Label>
-                  <Input
-                    id="finalize-time"
-                    type="time"
-                    value={finalizeTime}
-                    onChange={(e) => setFinalizeTime(e.target.value)}
-                    className="w-40"
-                  />
-                </div>
+              {/* Start time */}
+              <div className="space-y-1.5">
+                <Label htmlFor="finalize-time" className="flex items-center gap-2 text-sm">
+                  <Clock className="h-4 w-4" />
+                  Start time <span className="text-muted-foreground font-normal">(optional)</span>
+                </Label>
+                <Input
+                  id="finalize-time"
+                  type="time"
+                  value={finalizeTime}
+                  onChange={(e) => setFinalizeTime(e.target.value)}
+                  className="w-40 [color-scheme:light]"
+                />
+              </div>
+
+              {/* Duration vs Range toggle */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFinalizeTimeMode("duration")}
+                  className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-all ${
+                    finalizeTimeMode === "duration"
+                      ? "border-primary bg-terracotta-50 text-primary font-medium ring-1 ring-primary"
+                      : "border-border bg-card text-muted-foreground hover:border-sand-400"
+                  }`}
+                >
+                  <Hourglass className="h-4 w-4 shrink-0" />
+                  Duration
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFinalizeTimeMode("range")}
+                  className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-all ${
+                    finalizeTimeMode === "range"
+                      ? "border-primary bg-terracotta-50 text-primary font-medium ring-1 ring-primary"
+                      : "border-border bg-card text-muted-foreground hover:border-sand-400"
+                  }`}
+                >
+                  <CalendarRange className="h-4 w-4 shrink-0" />
+                  End date &amp; time
+                </button>
+              </div>
+
+              {finalizeTimeMode === "duration" ? (
                 <div className="space-y-1.5">
                   <Label htmlFor="finalize-duration" className="flex items-center gap-2 text-sm">
                     <Hourglass className="h-4 w-4" />
@@ -197,10 +236,51 @@ export default function PollView({ event, isHost }: PollViewProps) {
                     </SelectContent>
                   </Select>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Set a time and duration before locking in the date (time can be left blank).
-                </p>
-              </div>
+              ) : (
+                <div className="flex flex-wrap gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="flex items-center gap-2 text-sm">
+                      <CalendarRange className="h-4 w-4" />
+                      End date
+                    </Label>
+                    <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="w-40 justify-start font-normal">
+                          {finalizeEndDate
+                            ? format(parseLocalDate(finalizeEndDate), "MMM d, yyyy")
+                            : <span className="text-muted-foreground">Pick a date</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-3" align="start">
+                        <DateCalendar
+                          mode="single"
+                          selected={finalizeEndDate ? parseLocalDate(finalizeEndDate) : undefined}
+                          onSelect={(d) => {
+                            setFinalizeEndDate(d ? format(d, "yyyy-MM-dd") : "");
+                            setEndDateOpen(false);
+                          }}
+                          disabled={(d) => d < today}
+                          fromDate={today}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="finalize-end-time" className="flex items-center gap-2 text-sm">
+                      <Clock className="h-4 w-4" />
+                      End time <span className="text-muted-foreground font-normal">(optional)</span>
+                    </Label>
+                    <Input
+                      id="finalize-end-time"
+                      type="time"
+                      value={finalizeEndTime}
+                      onChange={(e) => setFinalizeEndTime(e.target.value)}
+                      className="w-40 [color-scheme:light]"
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-wrap items-center gap-3 border-t border-sand-200 pt-3">
                 <Popover open={addOpen} onOpenChange={setAddOpen}>
                   <PopoverTrigger asChild>

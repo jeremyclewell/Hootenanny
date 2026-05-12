@@ -96,8 +96,8 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0;
   }
 
-  async finalizeEventDate(id: string, date: string, time?: string | null, durationMinutes?: number): Promise<Event | undefined> {
-    const updates: any = { date, time: time || null, pollStatus: "finalized" };
+  async finalizeEventDate(id: string, date: string, time?: string | null, durationMinutes?: number, endDate?: string | null, endTime?: string | null): Promise<Event | undefined> {
+    const updates: any = { date, time: time || null, pollStatus: "finalized", endDate: endDate || null, endTime: endTime || null };
     if (typeof durationMinutes === "number") updates.durationMinutes = durationMinutes;
     const [event] = await db.update(events).set(updates).where(eq(events.id, id)).returning();
     return event || undefined;

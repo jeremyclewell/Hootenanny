@@ -275,7 +275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Finalize a date (owner only)
   app.post("/api/events/:id/finalize", isAuthenticated, async (req: any, res) => {
     try {
-      const { date, time, durationMinutes } = finalizeDateSchema.parse(req.body);
+      const { date, time, durationMinutes, endDate, endTime } = finalizeDateSchema.parse(req.body);
 
       const event = await storage.getEvent(req.params.id);
       if (!event) {
@@ -293,7 +293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Date is not one of the candidate dates" });
       }
 
-      const updated = await storage.finalizeEventDate(req.params.id, date, time || null, durationMinutes);
+      const updated = await storage.finalizeEventDate(req.params.id, date, time || null, durationMinutes, endDate || null, endTime || null);
       if (!updated) {
         return res.status(500).json({ message: "Failed to finalize date" });
       }

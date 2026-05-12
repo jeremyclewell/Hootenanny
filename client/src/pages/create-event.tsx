@@ -19,7 +19,7 @@ import { insertEventSchema, type InsertEvent } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { themes } from "@/lib/theme-items";
-import { ArrowLeft, Calendar as CalendarIcon, MapPin, Users, Clock, PartyPopper, CalendarRange, Hourglass, Utensils } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, MapPin, Users, Clock, PartyPopper, CalendarRange, Hourglass, Utensils, ArrowRight } from "lucide-react";
 import { DURATION_OPTIONS } from "@/lib/duration";
 import { format } from "date-fns";
 import { Link } from "wouter";
@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { parseLocalDate, pollWindowEnd, startOfToday } from "@/lib/calendar";
 
 type DateMode = "fixed" | "poll";
+type TimeType = "duration" | "range";
 
 export default function CreateEvent() {
   const [, setLocation] = useLocation();
@@ -35,6 +36,10 @@ export default function CreateEvent() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [dateMode, setDateMode] = useState<DateMode>("fixed");
   const [candidateDates, setCandidateDates] = useState<Date[]>([]);
+  const [timeType, setTimeType] = useState<TimeType>("duration");
+  const [endDate, setEndDate] = useState<string>("");
+  const [endTime, setEndTime] = useState<string>("");
+  const [endDateOpen, setEndDateOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -97,11 +102,13 @@ export default function CreateEvent() {
         candidateDates: sorted.map((d) => format(d, "yyyy-MM-dd")),
       });
     } else {
-      if (!data.time) {
-        form.setError("time", { message: "Time is required" });
-        return;
+      const payload: InsertEvent = { ...data, pollStatus: "none", candidateDates: null };
+      if (timeType === "range") {
+        payload.endDate = endDate || null;
+        payload.endTime = endTime || null;
+        payload.durationMinutes = 120; // default, not used when endDate is set
       }
-      createEventMutation.mutate({ ...data, pollStatus: "none", candidateDates: null });
+      createEventMutation.mutate(payload);
     }
   };
 
@@ -331,34 +338,116 @@ export default function CreateEvent() {
                       )}
                     />
 
-                    <FormField
-                      control={form.control}
-                      name="durationMinutes"
-                      render={({ field }) => (
-                        <FormItem className="md:col-span-3">
-                          <FormLabel className="flex items-center gap-2">
-                            <Hourglass className="h-4 w-4" />
-                            How long will it last?
-                          </FormLabel>
-                          <Select
-                            onValueChange={(v) => field.onChange(parseInt(v))}
-                            value={String(field.value ?? 120)}
-                          >
-                            <FormControl>
-                              <SelectTrigger data-testid="select-duration">
-                                <SelectValue placeholder="Pick a duration" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {DURATION_OPTIONS.map((opt) => (
-                                <SelectItem key={opt.value} value={String(opt.value)}>{opt.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
+                    {/* Duration vs Range toggle */}
+                    <div className="md:col-span-3 space-y-3">
+                      <Label className="flex items-center gap-2">
+                        <Hourglass className="h-4 w-4" />
+                        How long will it last?
+                      </Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setTimeType("duration")}
+                          className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-all ${
+                            timeType === "duration"
+                              ? "border-primary bg-terracotta-50 text-primary font-medium ring-1 ring-primary"
+                              : "border-border bg-card text-muted-foreground hover:border-sand-400"
+                          }`}
+                        >
+                          <Hourglass className="h-4 w-4 shrink-0" />
+                          Duration
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTimeType("range")}
+                          className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-all ${
+                            timeType === "range"
+                              ? "border-primary bg-terracotta-50 text-primary font-medium ring-1 ring-primary"
+                              : "border-border bg-card text-muted-foreground hover:border-sand-400"
+                          }`}
+                        >
+                          <ArrowRight className="h-4 w-4 shrink-0" />
+                          End date &amp; time
+                        </button>
+                      </div>
+
+                      {timeType === "duration" ? (
+                        <FormField
+                          control={form.control}
+                          name="durationMinutes"
+                          render={({ field }) => (
+                            <FormItem>
+                              <Select
+                                onValueChange={(v) => field.onChange(parseInt(v))}
+                                value={String(field.value ?? 120)}
+                              >
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-duration">
+                                    <SelectValue placeholder="Pick a duration" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {DURATION_OPTIONS.map((opt) => (
+                                    <SelectItem key={opt.value} value={String(opt.value)}>{opt.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      ) : (
+                        <div className="flex flex-wrap gap-3">
+                          <div className="space-y-1.5">
+                            <Label className="flex items-center gap-2 text-sm">
+                              <CalendarIcon className="h-4 w-4" />
+                              End date
+                            </Label>
+                            <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  className={cn(
+                                    "h-11 w-44 rounded-xl border border-border/60 bg-muted/50 px-4 text-sm font-normal text-left transition-colors justify-start",
+                                    !endDate && "text-muted-foreground/70"
+                                  )}
+                                >
+                                  {endDate
+                                    ? format(parseLocalDate(endDate), "MMM d, yyyy")
+                                    : <span>Pick a date</span>}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <DateCalendar
+                                  mode="single"
+                                  selected={endDate ? parseLocalDate(endDate) : undefined}
+                                  onSelect={(d) => {
+                                    setEndDate(d ? format(d, "yyyy-MM-dd") : "");
+                                    setEndDateOpen(false);
+                                  }}
+                                  disabled={(d) => d < today}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="flex items-center gap-2 text-sm">
+                              <Clock className="h-4 w-4" />
+                              End time <span className="text-muted-foreground font-normal">(optional)</span>
+                            </Label>
+                            <Input
+                              type="time"
+                              value={endTime}
+                              onChange={(e) => setEndTime(e.target.value)}
+                              className="w-40 [color-scheme:light]"
+                            />
+                          </div>
+                        </div>
                       )}
-                    />
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-4">

@@ -29,6 +29,8 @@ function parseEventDateTime(
   date: string,
   time?: string | null,
   durationMinutes?: number | null,
+  endDate?: string | null,
+  endTime?: string | null,
 ): { start: Date; end: Date } | null {
   if (!date) return null;
 
@@ -43,6 +45,24 @@ function parseEventDateTime(
     const d = new Date(`${date}T12:00:00`);
     if (Number.isNaN(d.getTime())) return null;
     start = d;
+  }
+
+  // If an explicit end date/time is provided, use it instead of duration
+  if (endDate) {
+    const resolvedEndDate = endDate;
+    let end: Date;
+    if (endTime && /^\d{1,2}:\d{2}$/.test(endTime)) {
+      const [h, m] = endTime.split(":").map(Number);
+      const d = new Date(`${resolvedEndDate}T00:00:00`);
+      if (Number.isNaN(d.getTime())) return null;
+      d.setHours(h, m, 0, 0);
+      end = d;
+    } else {
+      const d = new Date(`${resolvedEndDate}T23:59:00`);
+      if (Number.isNaN(d.getTime())) return null;
+      end = d;
+    }
+    return { start, end };
   }
 
   const minutes = typeof durationMinutes === "number" && durationMinutes > 0 ? durationMinutes : 120;
@@ -66,7 +86,7 @@ function formatDateUTC(d: Date): string {
 
 export function buildGoogleCalendarUrl(event: Event): string | null {
   if (!event.date) return null;
-  const range = parseEventDateTime(event.date, event.time, event.durationMinutes);
+  const range = parseEventDateTime(event.date, event.time, event.durationMinutes, event.endDate, event.endTime);
   if (!range) return null;
 
   const params = new URLSearchParams({
@@ -90,7 +110,7 @@ function escapeIcs(text: string): string {
 
 export function buildIcsContent(event: Event): string | null {
   if (!event.date) return null;
-  const range = parseEventDateTime(event.date, event.time, event.durationMinutes);
+  const range = parseEventDateTime(event.date, event.time, event.durationMinutes, event.endDate, event.endTime);
   if (!range) return null;
 
   const uid = `${event.id}@hootenanny`;

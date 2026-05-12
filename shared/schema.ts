@@ -13,6 +13,8 @@ export const events = pgTable("events", {
   theme: text("theme").notNull(),
   date: text("date"),
   time: text("time"),
+  endDate: text("end_date"),
+  endTime: text("end_time"),
   location: text("location"),
   expectedGuests: integer("expected_guests"),
   pollStatus: text("poll_status").default("none").notNull(),
@@ -126,6 +128,8 @@ export const finalizeDateSchema = z.object({
   date: z.string().min(1, "Date is required"),
   time: z.string().optional().nullable(),
   durationMinutes: z.number().int().min(15).max(24 * 60).optional(),
+  endDate: z.string().optional().nullable(),
+  endTime: z.string().optional().nullable(),
 });
 
 export const addCandidateDatesSchema = z.object({

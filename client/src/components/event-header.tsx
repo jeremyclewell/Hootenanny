@@ -123,16 +123,32 @@ export default function EventHeader({ event, isHost }: EventHeaderProps) {
     }
   };
 
+  const isMultiDay = !!event.endDate && event.endDate !== event.date;
+
   const formattedDate = (() => {
     if (!event.date) return null;
     const d = parseLocalDate(event.date);
-    if (Number.isNaN(d.getTime())) return event.date; // fall back to raw string
+    if (Number.isNaN(d.getTime())) return event.date;
+    if (isMultiDay && event.endDate) {
+      const e = parseLocalDate(event.endDate);
+      if (!Number.isNaN(e.getTime())) {
+        // Same year? omit year from start
+        const sameYear = d.getFullYear() === e.getFullYear();
+        const startFmt = format(d, sameYear ? "EEE, MMM d" : "EEE, MMM d, yyyy");
+        return `${startFmt} – ${format(e, "EEE, MMM d, yyyy")}`;
+      }
+    }
     return format(d, "EEEE, MMMM d, yyyy");
   })();
 
   const timeRange = (() => {
     if (!event.time) return null;
     const start = formatTime(event.time);
+    // Explicit end time
+    if (event.endTime) {
+      const end = formatTime(event.endTime);
+      return `${start} – ${end}`;
+    }
     if (!event.durationMinutes) return start;
     const end = calcEndTime(event.time, event.durationMinutes);
     return `${start} – ${end}`;
