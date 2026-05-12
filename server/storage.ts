@@ -1,12 +1,15 @@
-import { events, items, dateVotes, rsvps, type Event, type InsertEvent, type Item, type InsertItem, type EditItem, type DateVote, type SubmitVote, type Rsvp, type SubmitRsvp } from "@shared/schema";
+import { events, items, dateVotes, rsvps, type Event, type InsertEvent, type Item, type InsertItem, type EditItem, type DateVote, type SubmitVote, type Rsvp, type SubmitRsvp, type EventStatus } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export interface IStorage {
   // Event operations
-  createEvent(event: InsertEvent): Promise<Event>;
+  createEvent(ownerId: string, event: InsertEvent): Promise<Event>;
   getEvent(id: string): Promise<Event | undefined>;
+  getEventsByOwner(ownerId: string): Promise<Event[]>;
+  updateEventStatus(id: string, status: EventStatus): Promise<Event | undefined>;
+  deleteEvent(id: string): Promise<boolean>;
   finalizeEventDate(id: string, date: string, time?: string | null, durationMinutes?: number): Promise<Event | undefined>;
   addCandidateDates(id: string, dates: string[]): Promise<Event | undefined>;
   reopenPolling(id: string, additionalDates: string[]): Promise<Event | undefined>;
@@ -41,15 +44,15 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  async createEvent(insertEvent: InsertEvent): Promise<Event> {
+  async createEvent(ownerId: string, insertEvent: InsertEvent): Promise<Event> {
     const id = nanoid();
-    const hostToken = nanoid(32);
     const [event] = await db
       .insert(events)
       .values({
         ...insertEvent,
         id,
-        hostToken,
+        ownerId,
+        status: "draft",
         date: insertEvent.date || null,
         time: insertEvent.time || null,
         description: insertEvent.description || null,
@@ -66,6 +69,28 @@ export class DatabaseStorage implements IStorage {
   async getEvent(id: string): Promise<Event | undefined> {
     const [event] = await db.select().from(events).where(eq(events.id, id));
     return event || undefined;
+  }
+
+  async getEventsByOwner(ownerId: string): Promise<Event[]> {
+    return await db
+      .select()
+      .from(events)
+      .where(eq(events.ownerId, ownerId))
+      .orderBy(desc(events.createdAt));
+  }
+
+  async updateEventStatus(id: string, status: EventStatus): Promise<Event | undefined> {
+    const [event] = await db
+      .update(events)
+      .set({ status })
+      .where(eq(events.id, id))
+      .returning();
+    return event || undefined;
+  }
+
+  async deleteEvent(id: string): Promise<boolean> {
+    const result = await db.delete(events).where(eq(events.id, id)).returning();
+    return result.length > 0;
   }
 
   async finalizeEventDate(id: string, date: string, time?: string | null, durationMinutes?: number): Promise<Event | undefined> {

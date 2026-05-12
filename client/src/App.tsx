@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/home";
 import CreateEvent from "@/pages/create-event";
 import Event from "@/pages/event";
+import MyEvents from "@/pages/my-events";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -13,6 +14,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/create" component={CreateEvent} />
+      <Route path="/my" component={MyEvents} />
       <Route path="/event/:id" component={Event} />
       <Route component={NotFound} />
     </Switch>

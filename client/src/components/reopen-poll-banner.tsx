@@ -23,10 +23,9 @@ import type { Event } from "@shared/schema";
 
 interface ReopenPollBannerProps {
   event: Event;
-  hostToken: string | null;
 }
 
-export default function ReopenPollBanner({ event, hostToken }: ReopenPollBannerProps) {
+export default function ReopenPollBanner({ event }: ReopenPollBannerProps) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [extraDates, setExtraDates] = useState<Date[]>([]);
@@ -38,7 +37,6 @@ export default function ReopenPollBanner({ event, hostToken }: ReopenPollBannerP
     mutationFn: async () => {
       const additionalDates = extraDates.map((d) => format(d, "yyyy-MM-dd"));
       const res = await apiRequest("POST", `/api/events/${event.id}/reopen`, {
-        hostToken,
         additionalDates,
       });
       return res.json();

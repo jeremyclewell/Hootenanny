@@ -2,8 +2,12 @@ import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export * from "./models/auth";
+
 export const events = pgTable("events", {
   id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  status: text("status").default("draft").notNull(),
   title: text("title").notNull(),
   description: text("description"),
   theme: text("theme").notNull(),
@@ -14,7 +18,6 @@ export const events = pgTable("events", {
   pollStatus: text("poll_status").default("none").notNull(),
   candidateDates: text("candidate_dates").array(),
   durationMinutes: integer("duration_minutes").default(120).notNull(),
-  hostToken: text("host_token"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -48,6 +51,8 @@ export const rsvps = pgTable("rsvps", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const eventStatusEnum = z.enum(["draft", "published"]);
+
 export const rsvpResponseEnum = z.enum(["yes", "no", "maybe"]);
 
 export const submitRsvpSchema = z.object({
@@ -60,8 +65,9 @@ export const submitRsvpSchema = z.object({
 export const insertEventSchema = createInsertSchema(events)
   .omit({
     id: true,
+    ownerId: true,
+    status: true,
     createdAt: true,
-    hostToken: true,
   })
   .extend({
     title: z.string().min(1, "Event title is required"),
@@ -105,16 +111,13 @@ export const finalizeDateSchema = z.object({
   date: z.string().min(1, "Date is required"),
   time: z.string().optional().nullable(),
   durationMinutes: z.number().int().min(15).max(24 * 60).optional(),
-  hostToken: z.string().min(1, "Host token is required"),
 });
 
 export const addCandidateDatesSchema = z.object({
-  hostToken: z.string().min(1, "Host token is required"),
   dates: z.array(z.string().min(1)).min(1, "Add at least one date"),
 });
 
 export const reopenPollSchema = z.object({
-  hostToken: z.string().min(1, "Host token is required"),
   additionalDates: z.array(z.string().min(1)).default([]),
 });
 
@@ -130,3 +133,4 @@ export type FinalizeDate = z.infer<typeof finalizeDateSchema>;
 export type Rsvp = typeof rsvps.$inferSelect;
 export type SubmitRsvp = z.infer<typeof submitRsvpSchema>;
 export type RsvpResponse = z.infer<typeof rsvpResponseEnum>;
+export type EventStatus = z.infer<typeof eventStatusEnum>;

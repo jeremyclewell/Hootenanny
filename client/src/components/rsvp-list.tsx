@@ -10,7 +10,6 @@ import { useState } from "react";
 interface RsvpListProps {
   eventId: string;
   isHost: boolean;
-  hostToken?: string | null;
 }
 
 type PublicRsvp = Omit<Rsvp, "guestEmail">;
@@ -60,7 +59,7 @@ const GROUPS: Array<{
 
 function normalize(name: string) { return name.trim().toLowerCase(); }
 
-export default function RsvpList({ eventId, isHost, hostToken }: RsvpListProps) {
+export default function RsvpList({ eventId, isHost }: RsvpListProps) {
   const { toast } = useToast();
   const [expanded, setExpanded] = useState(false);
 
@@ -70,7 +69,7 @@ export default function RsvpList({ eventId, isHost, hostToken }: RsvpListProps) 
 
   const deleteRsvpMutation = useMutation({
     mutationFn: async (rsvpId: number) => {
-      await apiRequest("DELETE", `/api/events/${eventId}/rsvps/${rsvpId}`, { hostToken });
+      await apiRequest("DELETE", `/api/events/${eventId}/rsvps/${rsvpId}`, {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/rsvps`] });

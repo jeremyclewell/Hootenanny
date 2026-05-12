@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
+import { isUnauthorizedError } from "@/lib/auth-utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,8 +32,15 @@ type DateMode = "fixed" | "poll";
 export default function CreateEvent() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [dateMode, setDateMode] = useState<DateMode>("fixed");
   const [candidateDates, setCandidateDates] = useState<Date[]>([]);
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      window.location.href = "/api/login";
+    }
+  }, [authLoading, isAuthenticated]);
 
   const form = useForm<InsertEvent>({
     resolver: zodResolver(insertEventSchema),
@@ -53,19 +62,18 @@ export default function CreateEvent() {
       return response.json();
     },
     onSuccess: (event) => {
-      if (event?.hostToken) {
-        try { localStorage.setItem(`hootenanny-host-${event.id}`, event.hostToken); } catch {}
-      }
       toast({
-        title: "Event Created!",
-        description:
-          dateMode === "poll"
-            ? "Share the link so guests can vote on a date."
-            : "Your hootenanny event has been created successfully.",
+        title: "Draft saved!",
+        description: "Review your event, then hit Publish to share it with guests.",
       });
       setLocation(`/event/${event.id}`);
     },
-    onError: () => {
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({ title: "Please sign in", description: "Logging you in…", variant: "destructive" });
+        setTimeout(() => { window.location.href = "/api/login"; }, 500);
+        return;
+      }
       toast({ title: "Error", description: "Failed to create event. Please try again.", variant: "destructive" });
     },
   });
@@ -444,7 +452,7 @@ export default function CreateEvent() {
                   disabled={createEventMutation.isPending}
                 >
                   <PartyPopper className="mr-2 h-5 w-5" />
-                  {createEventMutation.isPending ? "Creating…" : "Create Hootenanny"}
+                  {createEventMutation.isPending ? "Saving draft…" : "Save as draft"}
                 </Button>
               </form>
             </Form>

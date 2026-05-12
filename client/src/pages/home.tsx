@@ -1,8 +1,11 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Utensils, Plus, Calendar, Clock, CheckSquare, Square, AlignLeft, MapPin } from "lucide-react";
+import { Utensils, Plus, Calendar, Clock, CheckSquare, Square, AlignLeft, MapPin, ListChecks } from "lucide-react";
+import AuthButton from "@/components/auth-button";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function Home() {
+  const { isAuthenticated } = useAuth();
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -14,17 +17,21 @@ export default function Home() {
           <span className="text-lg font-serif font-semibold text-foreground">Hootenanny</span>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/create">
-            <Button variant="outline" size="sm" className="rounded-full border-border text-foreground hover:bg-muted/60 text-sm">
-              See an example
-            </Button>
-          </Link>
+          {isAuthenticated && (
+            <Link href="/my">
+              <Button variant="outline" size="sm" className="rounded-full border-border text-foreground hover:bg-muted/60 text-sm">
+                <ListChecks className="h-3.5 w-3.5 mr-1.5" />
+                My events
+              </Button>
+            </Link>
+          )}
           <Link href="/create">
             <Button size="sm" className="rounded-full bg-primary hover:bg-primary/90 text-sm px-4">
               <Plus className="h-3.5 w-3.5 mr-1" />
               New event
             </Button>
           </Link>
+          <AuthButton />
         </div>
       </header>
 

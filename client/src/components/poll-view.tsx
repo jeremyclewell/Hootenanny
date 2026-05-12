@@ -19,7 +19,6 @@ import type { Event, DateVote } from "@shared/schema";
 interface PollViewProps {
   event: Event;
   isHost: boolean;
-  hostToken: string | null;
 }
 
 const STORAGE_KEY = "hootenanny-voter";
@@ -34,7 +33,7 @@ function loadStoredVoter(): StoredVoter {
   return { name: "", email: "" };
 }
 
-export default function PollView({ event, isHost, hostToken }: PollViewProps) {
+export default function PollView({ event, isHost }: PollViewProps) {
   const { toast } = useToast();
   const candidateDates = event.candidateDates || [];
 
@@ -83,7 +82,7 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
 
   const addDatesMutation = useMutation({
     mutationFn: async (dates: string[]) => {
-      const res = await apiRequest("POST", `/api/events/${event.id}/candidate-dates`, { hostToken, dates });
+      const res = await apiRequest("POST", `/api/events/${event.id}/candidate-dates`, { dates });
       return res.json();
     },
     onSuccess: () => {
@@ -101,7 +100,6 @@ export default function PollView({ event, isHost, hostToken }: PollViewProps) {
         date,
         time: finalizeTime || null,
         durationMinutes: finalizeDuration,
-        hostToken,
       });
       return res.json();
     },

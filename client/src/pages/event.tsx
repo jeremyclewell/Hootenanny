@@ -1,8 +1,8 @@
-import { useParams } from "wouter";
+import { useParams, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useWebSocket } from "@/lib/websocket";
 import { queryClient } from "@/lib/queryClient";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import EventHeader from "@/components/event-header";
 import AddCustomItem from "@/components/add-custom-item";
 import ItemCategories from "@/components/item-categories";
@@ -13,36 +13,31 @@ import ReopenPollBanner from "@/components/reopen-poll-banner";
 import RsvpList from "@/components/rsvp-list";
 import RsvpCta from "@/components/rsvp-cta";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Hourglass, Utensils } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 import type { Event, Item } from "@shared/schema";
 
 export default function EventPage() {
   const { id } = useParams();
   const { lastMessage } = useWebSocket(id || null);
-
-  const [hostToken, setHostToken] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!id) return;
-    try {
-      setHostToken(localStorage.getItem(`hootenanny-host-${id}`));
-    } catch {
-      setHostToken(null);
-    }
-  }, [id]);
+  const { user } = useAuth();
 
   const eventQuery = useQuery<Event>({
     queryKey: [`/api/events/${id}`],
     enabled: !!id,
+    retry: false,
   });
 
-  const isPolling = eventQuery.data?.pollStatus === "polling";
-  const isHost = !!hostToken;
+  const event = eventQuery.data;
+  const isHost = !!user && !!event && user.id === event.ownerId;
+  const isPolling = event?.pollStatus === "polling";
+  const isDraft = event?.status === "draft";
 
   const itemsQuery = useQuery<Item[]>({
     queryKey: [`/api/events/${id}/items`],
-    enabled: !!id && !isPolling,
+    enabled: !!id && !isPolling && !!event,
   });
 
   useEffect(() => {
@@ -62,7 +57,12 @@ export default function EventPage() {
     if (lastMessage.type === "rsvpSubmitted" || lastMessage.type === "rsvpDeleted") {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/rsvps`] });
     }
-    if (lastMessage.type === "dateFinalized" || lastMessage.type === "pollReopened") {
+    if (
+      lastMessage.type === "dateFinalized" ||
+      lastMessage.type === "pollReopened" ||
+      lastMessage.type === "eventPublished" ||
+      lastMessage.type === "eventUnpublished"
+    ) {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/items`] });
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/votes`] });
@@ -90,26 +90,42 @@ export default function EventPage() {
   }
 
   if (eventQuery.error || !eventQuery.data) {
+    // Differentiate "draft, hidden" from "not found"
+    const message = (eventQuery.error as Error | undefined)?.message || "";
+    const isDraftHidden = /^403:/.test(message) && /draft|not published/i.test(message);
+
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-background">
-        <Card className="w-full max-w-md mx-4 surface-card">
+      <div className="min-h-screen w-full flex items-center justify-center bg-background px-4">
+        <Card className="w-full max-w-md surface-card">
           <CardContent className="pt-6">
             <div className="flex mb-4 gap-3 items-center">
               <span className="icon-chip-md bg-terracotta-50">
-                <AlertCircle className="h-5 w-5 text-destructive" />
+                {isDraftHidden ? (
+                  <Hourglass className="h-5 w-5 text-primary" />
+                ) : (
+                  <AlertCircle className="h-5 w-5 text-destructive" />
+                )}
               </span>
-              <h1 className="text-2xl font-serif font-bold text-foreground">Event not found</h1>
+              <h1 className="text-2xl font-serif font-bold text-foreground">
+                {isDraftHidden ? "Not published yet" : "Event not found"}
+              </h1>
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
-              The hootenanny event you're looking for doesn't exist or has been removed.
+              {isDraftHidden
+                ? "The host hasn't published this event yet. Check back later, or ask them to send the link once it's live."
+                : "The hootenanny event you're looking for doesn't exist or has been removed."}
             </p>
+            <Link href="/">
+              <Button variant="outline" className="mt-6 rounded-full">
+                <Utensils className="mr-2 h-4 w-4" /> Back to home
+              </Button>
+            </Link>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  const event = eventQuery.data;
   const items = itemsQuery.data || [];
 
   // ─── Polling mode: date not yet confirmed ────────────────────────────────
@@ -119,9 +135,9 @@ export default function EventPage() {
     return (
       <>
         <div className="min-h-screen relative" style={{ zIndex: 1 }}>
-          <EventHeader event={event} />
+          <EventHeader event={event!} isHost={isHost} />
           <main className="max-w-2xl mx-auto px-4 sm:px-6 pb-16">
-            <PollView event={event} isHost={isHost} hostToken={hostToken} />
+            <PollView event={event!} isHost={isHost} />
           </main>
         </div>
       </>
@@ -132,20 +148,21 @@ export default function EventPage() {
   return (
     <>
       <div className="min-h-screen relative" style={{ zIndex: 1 }}>
-        <EventHeader event={event} />
+        <EventHeader event={event!} isHost={isHost} />
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-          <RsvpCta eventId={event.id} eventTitle={event.title} />
+          {/* Don't show RSVP CTA on a draft — guests can't RSVP yet */}
+          {!isDraft && <RsvpCta eventId={event!.id} eventTitle={event!.title} />}
 
-          {isHost && event.pollStatus === "finalized" && (
-            <ReopenPollBanner event={event} hostToken={hostToken} />
+          {isHost && event!.pollStatus === "finalized" && (
+            <ReopenPollBanner event={event!} />
           )}
 
-          <RsvpList eventId={event.id} isHost={isHost} hostToken={hostToken} />
+          {!isDraft && <RsvpList eventId={event!.id} isHost={isHost} />}
 
           <div className="mt-8 space-y-4">
-            <AddCustomItem eventId={event.id} />
-            <ItemCategories items={items} eventId={event.id} />
+            <AddCustomItem eventId={event!.id} />
+            <ItemCategories items={items} eventId={event!.id} />
           </div>
 
           <ClaimItemModal />

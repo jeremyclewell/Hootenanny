@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -7,18 +8,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   Share2, Utensils, MapPin, Users, Calendar, CalendarPlus, Download,
-  Clock, Hourglass, Plus, Bell,
+  Clock, Hourglass, Plus, Bell, Send, EyeOff,
 } from "lucide-react";
 import type { Event } from "@shared/schema";
 import { buildGoogleCalendarUrl, downloadIcsFile, parseLocalDate } from "@/lib/calendar";
 import { SiGooglecalendar } from "react-icons/si";
 import { formatDuration } from "@/lib/duration";
 import { format } from "date-fns";
+import AuthButton from "@/components/auth-button";
 
 interface EventHeaderProps {
   event: Event;
+  isHost: boolean;
 }
 
 function formatTime(time: string) {
@@ -71,10 +75,39 @@ function StringLights() {
   );
 }
 
-export default function EventHeader({ event }: EventHeaderProps) {
+export default function EventHeader({ event, isHost }: EventHeaderProps) {
   const { toast } = useToast();
+  const isDraft = event.status === "draft";
+
+  const publishMutation = useMutation({
+    mutationFn: async () => {
+      const path = isDraft ? "publish" : "unpublish";
+      const res = await apiRequest("POST", `/api/events/${event.id}/${path}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/events/${event.id}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/my/events"] });
+      toast({
+        title: isDraft ? "Event published!" : "Event moved back to draft",
+        description: isDraft
+          ? "Anyone with the link can now RSVP and claim items."
+          : "Guests can no longer see the event.",
+      });
+    },
+    onError: () =>
+      toast({ title: "Could not update event", variant: "destructive" }),
+  });
 
   const handleShare = async () => {
+    if (isDraft) {
+      toast({
+        title: "Publish first",
+        description: "Drafts aren't visible to guests yet — publish to share.",
+        variant: "destructive",
+      });
+      return;
+    }
     const url = window.location.href;
     if (navigator.share) {
       try {
@@ -105,7 +138,7 @@ export default function EventHeader({ event }: EventHeaderProps) {
     return `${start} – ${end}`;
   })();
 
-  const isOpenForRsvps = event.pollStatus !== "polling";
+  const isOpenForRsvps = !isDraft && event.pollStatus !== "polling";
 
   return (
     <>
@@ -120,7 +153,7 @@ export default function EventHeader({ event }: EventHeaderProps) {
           </Link>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            {event.date && event.pollStatus !== "polling" && (
+            {event.date && event.pollStatus !== "polling" && !isDraft && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="rounded-full" data-testid="button-add-to-calendar">
@@ -154,12 +187,40 @@ export default function EventHeader({ event }: EventHeaderProps) {
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-            <Link href="/create">
-              <Button size="sm" className="rounded-full bg-coral-gradient hover:opacity-90 shadow-coral border-0 text-white">
-                <Plus className="sm:mr-1.5 h-4 w-4" />
-                <span className="hidden sm:inline">Create Event</span>
+
+            {isHost && isDraft && (
+              <Button
+                size="sm"
+                onClick={() => publishMutation.mutate()}
+                disabled={publishMutation.isPending}
+                className="rounded-full bg-coral-gradient hover:opacity-90 shadow-coral border-0 text-white"
+                data-testid="button-publish"
+              >
+                <Send className="sm:mr-1.5 h-4 w-4" />
+                <span className="hidden sm:inline">{publishMutation.isPending ? "Publishing…" : "Publish"}</span>
               </Button>
-            </Link>
+            )}
+            {isHost && !isDraft && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => publishMutation.mutate()}
+                disabled={publishMutation.isPending}
+                className="rounded-full"
+                data-testid="button-unpublish"
+              >
+                <EyeOff className="sm:mr-1.5 h-4 w-4" />
+                <span className="hidden sm:inline">Unpublish</span>
+              </Button>
+            )}
+            {!isHost && (
+              <Link href="/create">
+                <Button size="sm" className="rounded-full bg-coral-gradient hover:opacity-90 shadow-coral border-0 text-white">
+                  <Plus className="sm:mr-1.5 h-4 w-4" />
+                  <span className="hidden sm:inline">Create Event</span>
+                </Button>
+              </Link>
+            )}
             <button
               onClick={handleShare}
               className="hover-elevate active-elevate-2 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-muted-foreground"
@@ -168,15 +229,40 @@ export default function EventHeader({ event }: EventHeaderProps) {
             >
               <Share2 className="h-4 w-4" />
             </button>
-            <span
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-muted-foreground"
-              aria-hidden
-            >
-              <Bell className="h-4 w-4" />
-            </span>
+            <AuthButton />
           </div>
         </nav>
       </div>
+
+      {/* Owner-only draft banner */}
+      {isHost && isDraft && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+          <div
+            className="flex flex-wrap items-start gap-3 rounded-2xl border border-sand-200 bg-sand-100 p-4"
+            data-testid="banner-draft"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-card">
+              <Hourglass className="h-5 w-5 text-sand-600" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-serif text-base font-semibold text-foreground">This event is a draft</p>
+              <p className="text-sm text-muted-foreground">
+                Only you can see it. Publish to share the link with guests so they can RSVP and claim items.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => publishMutation.mutate()}
+              disabled={publishMutation.isPending}
+              className="rounded-full bg-coral-gradient hover:opacity-90 shadow-coral border-0 text-white"
+              data-testid="button-publish-banner"
+            >
+              <Send className="mr-1.5 h-4 w-4" />
+              {publishMutation.isPending ? "Publishing…" : "Publish event"}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Hero card — dark teal gradient with string lights */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
@@ -195,6 +281,12 @@ export default function EventHeader({ event }: EventHeaderProps) {
           <div className="relative">
             {/* Status pills */}
             <div className="mb-6 flex flex-wrap items-center gap-2">
+              {isDraft && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/12 px-3 py-1.5 text-xs font-medium text-white/95 backdrop-blur-sm">
+                  <Hourglass className="h-3 w-3" />
+                  Draft
+                </span>
+              )}
               {isOpenForRsvps && (
                 <span className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1.5 text-xs font-medium text-white/95 backdrop-blur-sm">
                   <span className="h-2 w-2 rounded-full" style={{ background: "hsl(150, 65%, 60%)" }} />

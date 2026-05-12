@@ -1,11 +1,20 @@
-import type { Express } from "express";
+import type { Express, RequestHandler, Response } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { insertEventSchema, customItemSchema, claimItemSchema, editItemSchema, submitVoteSchema, finalizeDateSchema, addCandidateDatesSchema, reopenPollSchema, submitRsvpSchema, type Event } from "@shared/schema";
 import { getThemeItems } from "../client/src/lib/theme-items";
+import { setupAuth, isAuthenticated, registerAuthRoutes } from "./replit_integrations/auth";
+
+function getUserId(req: any): string | undefined {
+  return req.user?.claims?.sub;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Wire Replit Auth — must come before other routes that use req.user
+  await setupAuth(app);
+  registerAuthRoutes(app);
+
   const httpServer = createServer(app);
 
   // WebSocket server for real-time updates
@@ -39,20 +48,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
 
-  // Strip the host token from event responses sent over the wire
-  function publicEvent(event: Event): Omit<Event, "hostToken">;
-  function publicEvent(event: Event | undefined): Omit<Event, "hostToken"> | undefined;
-  function publicEvent(event: Event | undefined): Omit<Event, "hostToken"> | undefined {
-    if (!event) return event;
-    const { hostToken: _hostToken, ...rest } = event;
-    return rest;
+  // Helper: check whether the requester owns this event. Optionally
+  // accepts authentication state — if the user isn't logged in, returns
+  // false. Used to gate host-only actions (publish, delete, finalize,
+  // candidate-dates, reopen, rsvp removal).
+  function isOwner(req: any, event: Event): boolean {
+    const userId = getUserId(req);
+    return !!userId && userId === event.ownerId;
   }
 
-  // Create new event
-  app.post("/api/events", async (req, res) => {
+  // Helper: verify event is visible to the requester. Drafts are owner-only.
+  function canViewEvent(req: any, event: Event): boolean {
+    if (event.status === "published") return true;
+    return isOwner(req, event);
+  }
+
+  // Standard 403 for draft events viewed by non-owners
+  function respondDraftHidden(res: Response) {
+    return res.status(403).json({ message: "Event is not published yet", status: "draft" });
+  }
+
+  // Create new event (requires login)
+  app.post("/api/events", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = getUserId(req)!;
       const eventData = insertEventSchema.parse(req.body);
-      const event = await storage.createEvent(eventData);
+      const event = await storage.createEvent(userId, eventData);
 
       // Seed theme items at creation so the host can prep the menu
       // (add / edit / remove items) even while a date poll is open.
@@ -68,30 +89,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })),
       );
 
-      // Return the full event including the host token so the creator's
-      // browser can store it in localStorage and prove ownership later.
       res.json(event);
     } catch (error) {
       res.status(400).json({ message: "Invalid event data" });
     }
   });
 
-  // Get event by ID (host token stripped)
-  app.get("/api/events/:id", async (req, res) => {
+  // List the current user's events (authored by them)
+  app.get("/api/my/events", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getUserId(req)!;
+      const events = await storage.getEventsByOwner(userId);
+      res.json(events);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch events" });
+    }
+  });
+
+  // Publish a draft event (owner only)
+  app.post("/api/events/:id/publish", isAuthenticated, async (req: any, res) => {
+    try {
+      const event = await storage.getEvent(req.params.id);
+      if (!event) return res.status(404).json({ message: "Event not found" });
+      if (!isOwner(req, event)) return res.status(403).json({ message: "Only the event owner can publish" });
+      const updated = await storage.updateEventStatus(req.params.id, "published");
+      if (!updated) return res.status(500).json({ message: "Failed to publish" });
+      broadcastToEvent(req.params.id, { type: "eventPublished", event: updated });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to publish event" });
+    }
+  });
+
+  // Unpublish back to draft (owner only)
+  app.post("/api/events/:id/unpublish", isAuthenticated, async (req: any, res) => {
+    try {
+      const event = await storage.getEvent(req.params.id);
+      if (!event) return res.status(404).json({ message: "Event not found" });
+      if (!isOwner(req, event)) return res.status(403).json({ message: "Only the event owner can unpublish" });
+      const updated = await storage.updateEventStatus(req.params.id, "draft");
+      if (!updated) return res.status(500).json({ message: "Failed to unpublish" });
+      broadcastToEvent(req.params.id, { type: "eventUnpublished", event: updated });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to unpublish event" });
+    }
+  });
+
+  // Delete an event (owner only)
+  app.delete("/api/events/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const event = await storage.getEvent(req.params.id);
+      if (!event) return res.status(404).json({ message: "Event not found" });
+      if (!isOwner(req, event)) return res.status(403).json({ message: "Only the event owner can delete this event" });
+      const ok = await storage.deleteEvent(req.params.id);
+      if (!ok) return res.status(500).json({ message: "Failed to delete" });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete event" });
+    }
+  });
+
+  // Get event by ID. Drafts are visible only to the owner.
+  app.get("/api/events/:id", async (req: any, res) => {
     try {
       const event = await storage.getEvent(req.params.id);
       if (!event) {
         return res.status(404).json({ message: "Event not found" });
       }
-      res.json(publicEvent(event));
+      if (!canViewEvent(req, event)) return respondDraftHidden(res);
+      res.json(event);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch event" });
     }
   });
 
   // Get event items
-  app.get("/api/events/:id/items", async (req, res) => {
+  app.get("/api/events/:id/items", async (req: any, res) => {
     try {
+      const event = await storage.getEvent(req.params.id);
+      if (!event) return res.status(404).json({ message: "Event not found" });
+      if (!canViewEvent(req, event)) return respondDraftHidden(res);
       const items = await storage.getEventItems(req.params.id);
       res.json(items);
     } catch (error) {
@@ -100,8 +178,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get event stats
-  app.get("/api/events/:id/stats", async (req, res) => {
+  app.get("/api/events/:id/stats", async (req: any, res) => {
     try {
+      const event = await storage.getEvent(req.params.id);
+      if (!event) return res.status(404).json({ message: "Event not found" });
+      if (!canViewEvent(req, event)) return respondDraftHidden(res);
       const stats = await storage.getEventStats(req.params.id);
       res.json(stats);
     } catch (error) {
@@ -111,8 +192,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Get poll votes for an event (voter emails are stripped — they are
   // private to the host and never displayed in the UI)
-  app.get("/api/events/:id/votes", async (req, res) => {
+  app.get("/api/events/:id/votes", async (req: any, res) => {
     try {
+      const event = await storage.getEvent(req.params.id);
+      if (!event) return res.status(404).json({ message: "Event not found" });
+      if (!canViewEvent(req, event)) return respondDraftHidden(res);
       const votes = await storage.getEventVotes(req.params.id);
       const publicVotes = votes.map(({ voterEmail: _voterEmail, ...rest }) => rest);
       res.json(publicVotes);
@@ -122,12 +206,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Submit or update a vote
-  app.post("/api/events/:id/votes", async (req, res) => {
+  app.post("/api/events/:id/votes", async (req: any, res) => {
     try {
       const event = await storage.getEvent(req.params.id);
       if (!event) {
         return res.status(404).json({ message: "Event not found" });
       }
+      if (!canViewEvent(req, event)) return respondDraftHidden(res);
       if (event.pollStatus !== "polling") {
         return res.status(400).json({ message: "This event is not accepting votes" });
       }
@@ -154,16 +239,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Finalize a date (host only)
-  app.post("/api/events/:id/finalize", async (req, res) => {
+  // Finalize a date (owner only)
+  app.post("/api/events/:id/finalize", isAuthenticated, async (req: any, res) => {
     try {
-      const { date, time, durationMinutes, hostToken } = finalizeDateSchema.parse(req.body);
+      const { date, time, durationMinutes } = finalizeDateSchema.parse(req.body);
 
       const event = await storage.getEvent(req.params.id);
       if (!event) {
         return res.status(404).json({ message: "Event not found" });
       }
-      if (event.hostToken !== hostToken) {
+      if (!isOwner(req, event)) {
         return res.status(403).json({ message: "Only the event host can finalize the date" });
       }
       if (event.pollStatus !== "polling") {
@@ -198,25 +283,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       broadcastToEvent(req.params.id, {
         type: 'dateFinalized',
-        event: publicEvent(updated),
+        event: updated,
       });
 
-      res.json(publicEvent(updated));
+      res.json(updated);
     } catch (error) {
       res.status(400).json({ message: "Invalid finalize data" });
     }
   });
 
-  // Add additional candidate dates to an active poll (host only)
-  app.post("/api/events/:id/candidate-dates", async (req, res) => {
+  // Add additional candidate dates to an active poll (owner only)
+  app.post("/api/events/:id/candidate-dates", isAuthenticated, async (req: any, res) => {
     try {
-      const { hostToken, dates } = addCandidateDatesSchema.parse(req.body);
+      const { dates } = addCandidateDatesSchema.parse(req.body);
 
       const event = await storage.getEvent(req.params.id);
       if (!event) {
         return res.status(404).json({ message: "Event not found" });
       }
-      if (event.hostToken !== hostToken) {
+      if (!isOwner(req, event)) {
         return res.status(403).json({ message: "Only the event host can edit candidate dates" });
       }
       if (event.pollStatus !== "polling") {
@@ -230,27 +315,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       broadcastToEvent(req.params.id, {
         type: "candidateDatesUpdated",
-        event: publicEvent(updated),
+        event: updated,
       });
 
-      res.json(publicEvent(updated));
+      res.json(updated);
     } catch (error) {
       res.status(400).json({ message: "Invalid candidate dates data" });
     }
   });
 
-  // Reopen polling on a finalized event (host only). Preserves prior votes
+  // Reopen polling on a finalized event (owner only). Preserves prior votes
   // and items; the previously finalized date is rolled back into the
   // candidate set so prior votes remain meaningful.
-  app.post("/api/events/:id/reopen", async (req, res) => {
+  app.post("/api/events/:id/reopen", isAuthenticated, async (req: any, res) => {
     try {
-      const { hostToken, additionalDates } = reopenPollSchema.parse(req.body);
+      const { additionalDates } = reopenPollSchema.parse(req.body);
 
       const event = await storage.getEvent(req.params.id);
       if (!event) {
         return res.status(404).json({ message: "Event not found" });
       }
-      if (event.hostToken !== hostToken) {
+      if (!isOwner(req, event)) {
         return res.status(403).json({ message: "Only the event host can reopen polling" });
       }
       if (event.pollStatus !== "finalized") {
@@ -264,18 +349,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       broadcastToEvent(req.params.id, {
         type: "pollReopened",
-        event: publicEvent(updated),
+        event: updated,
       });
 
-      res.json(publicEvent(updated));
+      res.json(updated);
     } catch (error) {
       res.status(400).json({ message: "Invalid reopen data" });
     }
   });
 
   // RSVPs — list (guest emails stripped, kept private to host)
-  app.get("/api/events/:id/rsvps", async (req, res) => {
+  app.get("/api/events/:id/rsvps", async (req: any, res) => {
     try {
+      const event = await storage.getEvent(req.params.id);
+      if (!event) return res.status(404).json({ message: "Event not found" });
+      if (!canViewEvent(req, event)) return respondDraftHidden(res);
       const rsvps = await storage.getEventRsvps(req.params.id);
       const publicRsvps = rsvps.map(({ guestEmail: _email, ...rest }) => rest);
       res.json(publicRsvps);
@@ -285,12 +373,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Submit or update an RSVP
-  app.post("/api/events/:id/rsvps", async (req, res) => {
+  app.post("/api/events/:id/rsvps", async (req: any, res) => {
     try {
       const event = await storage.getEvent(req.params.id);
       if (!event) {
         return res.status(404).json({ message: "Event not found" });
       }
+      if (!canViewEvent(req, event)) return respondDraftHidden(res);
 
       const rsvpData = submitRsvpSchema.parse(req.body);
       const rsvp = await storage.upsertRsvp(req.params.id, rsvpData);
@@ -309,8 +398,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete an RSVP. A guest can remove their own (matching name + optional
-  // email) or the host can remove any entry by passing a valid hostToken.
-  app.delete("/api/events/:id/rsvps/:rsvpId", async (req, res) => {
+  // email) or the authenticated host can remove any entry on their event.
+  app.delete("/api/events/:id/rsvps/:rsvpId", async (req: any, res) => {
     try {
       const eventId = req.params.id;
       const rsvpId = parseInt(req.params.rsvpId, 10);
@@ -328,20 +417,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "RSVP not found" });
       }
 
-      const { hostToken, guestName, guestEmail } = (req.body || {}) as {
-        hostToken?: string;
+      const { guestName, guestEmail } = (req.body || {}) as {
         guestName?: string;
         guestEmail?: string;
       };
 
-      const isHost = !!hostToken && hostToken === event.hostToken;
+      const isHost = isOwner(req, event);
       const norm = (s: string | null | undefined) => (s || "").trim().toLowerCase();
-      const isOwner =
+      const isOwnRsvp =
         !!guestName &&
         norm(guestName) === norm(rsvp.guestName) &&
         norm(guestEmail) === norm(rsvp.guestEmail);
 
-      if (!isHost && !isOwner) {
+      if (!isHost && !isOwnRsvp) {
         return res
           .status(403)
           .json({ message: "Not allowed to remove this RSVP" });
@@ -365,8 +453,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Add custom item — clients are only allowed to set name + category;
   // every other field (eventId, isCustom, claimed*) is fixed by the server.
-  app.post("/api/events/:id/items", async (req, res) => {
+  app.post("/api/events/:id/items", async (req: any, res) => {
     try {
+      const event = await storage.getEvent(req.params.id);
+      if (!event) return res.status(404).json({ message: "Event not found" });
+      if (!canViewEvent(req, event)) return respondDraftHidden(res);
+
       const { name, category } = customItemSchema.parse(req.body);
       const item = await storage.addItem({
         eventId: req.params.id,
