@@ -5,6 +5,8 @@ import { storage } from "./storage";
 import { insertEventSchema, customItemSchema, claimItemSchema, editItemSchema, submitVoteSchema, finalizeDateSchema, addCandidateDatesSchema, reopenPollSchema, submitRsvpSchema, submitCommentSchema, type Event } from "@shared/schema";
 import { getThemeItems } from "../client/src/lib/theme-items";
 import { setupAuth, isAuthenticated, registerAuthRoutes } from "./replit_integrations/auth";
+import { authStorage } from "./replit_integrations/auth/storage";
+import { sendRsvpConfirmation, sendHostRsvpNotification, sendItemClaimConfirmation } from "./email";
 
 function getUserId(req: any): string | undefined {
   return req.user?.claims?.sub;
@@ -423,6 +425,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       res.json(publicRsvp);
+
+      // Fire-and-forget emails (after response sent so they don't slow the request)
+      setImmediate(async () => {
+        try {
+          const allRsvps = await storage.getEventRsvps(event.id);
+          // 1. Confirmation to guest (only if they provided an email)
+          if (rsvp.guestEmail) {
+            await sendRsvpConfirmation({
+              toEmail: rsvp.guestEmail,
+              guestName: rsvp.guestName,
+              response: rsvp.response,
+              plusOnes: rsvp.plusOnes,
+              event,
+              req,
+            });
+          }
+          // 2. Notification to host (look up their email from the users table)
+          const hostUser = await authStorage.getUser(event.ownerId);
+          if (hostUser?.email) {
+            const hostName = [hostUser.firstName, hostUser.lastName].filter(Boolean).join(" ") || hostUser.email;
+            await sendHostRsvpNotification({
+              hostEmail: hostUser.email,
+              hostName,
+              guestName: rsvp.guestName,
+              response: rsvp.response,
+              plusOnes: rsvp.plusOnes,
+              event,
+              totalRsvps: allRsvps.length,
+              req,
+            });
+          }
+        } catch (err) {
+          console.error("[email] RSVP email error:", err);
+        }
+      });
     } catch (error) {
       res.status(400).json({ message: "Invalid RSVP data" });
     }
@@ -532,6 +569,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       res.json(item);
+
+      // Fire-and-forget confirmation email to claimer (only if they gave an email)
+      if (claimData.email) {
+        setImmediate(async () => {
+          try {
+            const event = await storage.getEvent(item.eventId);
+            if (!event) return;
+            await sendItemClaimConfirmation({
+              toEmail: claimData.email!,
+              claimerName: claimData.name,
+              itemName: item.name,
+              category: item.category,
+              event,
+              req,
+            });
+          } catch (err) {
+            console.error("[email] Item claim email error:", err);
+          }
+        });
+      }
     } catch (error) {
       res.status(400).json({ message: "Invalid claim data" });
     }
