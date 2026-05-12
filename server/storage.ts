@@ -1,11 +1,11 @@
 import {
-  events, items, dateVotes, rsvps, itemComments, eventComments,
+  events, items, dateVotes, rsvps, itemComments, eventComments, commentViews,
   type Event, type InsertEvent, type Item, type InsertItem, type EditItem,
   type DateVote, type SubmitVote, type Rsvp, type SubmitRsvp, type EventStatus,
   type ItemComment, type EventComment, type SubmitComment,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, gt, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export interface IStorage {
@@ -51,6 +51,10 @@ export interface IStorage {
   addEventComment(eventId: string, comment: SubmitComment): Promise<EventComment>;
   getEventComment(commentId: number): Promise<EventComment | undefined>;
   deleteEventComment(commentId: number): Promise<boolean>;
+
+  // Comment read tracking
+  markCommentsRead(ownerId: string, eventId: string): Promise<void>;
+  getUnreadCommentCounts(ownerId: string, eventIds: string[]): Promise<Record<string, number>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -268,6 +272,45 @@ export class DatabaseStorage implements IStorage {
   async deleteEventComment(commentId: number): Promise<boolean> {
     const result = await db.delete(eventComments).where(eq(eventComments.id, commentId)).returning();
     return result.length > 0;
+  }
+
+  // ── Comment read tracking ────────────────────────────────────────────────────
+
+  async markCommentsRead(ownerId: string, eventId: string): Promise<void> {
+    const existing = await db.select().from(commentViews)
+      .where(and(eq(commentViews.ownerId, ownerId), eq(commentViews.eventId, eventId)));
+    if (existing.length > 0) {
+      await db.update(commentViews)
+        .set({ lastViewedAt: new Date() })
+        .where(and(eq(commentViews.ownerId, ownerId), eq(commentViews.eventId, eventId)));
+    } else {
+      await db.insert(commentViews).values({ ownerId, eventId, lastViewedAt: new Date() });
+    }
+  }
+
+  async getUnreadCommentCounts(ownerId: string, eventIds: string[]): Promise<Record<string, number>> {
+    if (eventIds.length === 0) return {};
+
+    const [views, allEc, allIc] = await Promise.all([
+      db.select().from(commentViews)
+        .where(and(eq(commentViews.ownerId, ownerId), inArray(commentViews.eventId, eventIds))),
+      db.select({ id: eventComments.id, eventId: eventComments.eventId, createdAt: eventComments.createdAt })
+        .from(eventComments).where(inArray(eventComments.eventId, eventIds)),
+      db.select({ id: itemComments.id, eventId: itemComments.eventId, createdAt: itemComments.createdAt })
+        .from(itemComments).where(inArray(itemComments.eventId, eventIds)),
+    ]);
+
+    const viewMap = new Map(views.map((v) => [v.eventId, v.lastViewedAt]));
+
+    const counts: Record<string, number> = {};
+    for (const eventId of eventIds) {
+      const lastViewed = viewMap.get(eventId);
+      const ecCount = allEc.filter((c) => c.eventId === eventId && (!lastViewed || c.createdAt > lastViewed)).length;
+      const icCount = allIc.filter((c) => c.eventId === eventId && (!lastViewed || c.createdAt > lastViewed)).length;
+      counts[eventId] = ecCount + icCount;
+    }
+
+    return counts;
   }
 }
 

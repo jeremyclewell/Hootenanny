@@ -68,6 +68,13 @@ export const eventComments = pgTable("event_comments", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const commentViews = pgTable("comment_views", {
+  id: serial("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  eventId: text("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+  lastViewedAt: timestamp("last_viewed_at").defaultNow().notNull(),
+});
+
 // ── Zod schemas ───────────────────────────────────────────────────────────────
 
 export const eventStatusEnum = z.enum(["draft", "published"]);

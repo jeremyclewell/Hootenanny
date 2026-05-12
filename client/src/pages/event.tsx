@@ -1,7 +1,7 @@
 import { useParams, Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useWebSocket } from "@/lib/websocket";
-import { queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useEffect } from "react";
 import EventHeader from "@/components/event-header";
 import AddCustomItem from "@/components/add-custom-item";
@@ -35,6 +35,21 @@ export default function EventPage() {
   const isHost = !!user && !!event && user.id === event.ownerId;
   const isPolling = event?.pollStatus === "polling";
   const isDraft = event?.status === "draft";
+
+  const markReadMutation = useMutation({
+    mutationFn: async (eventId: string) => {
+      await apiRequest("POST", `/api/events/${eventId}/mark-comments-read`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/my/events/comment-counts"] });
+    },
+  });
+
+  useEffect(() => {
+    if (isHost && id) {
+      markReadMutation.mutate(id);
+    }
+  }, [isHost, id]);
 
   const itemsQuery = useQuery<Item[]>({
     queryKey: [`/api/events/${id}/items`],
@@ -72,7 +87,10 @@ export default function EventPage() {
     if (["eventCommentAdded", "eventCommentDeleted"].includes(lastMessage.type)) {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/comments`] });
     }
-  }, [lastMessage, id]);
+    if (isHost && ["itemCommentAdded", "eventCommentAdded"].includes(lastMessage.type)) {
+      markReadMutation.mutate(id);
+    }
+  }, [lastMessage, id, isHost]);
 
   if (eventQuery.isLoading) {
     return (

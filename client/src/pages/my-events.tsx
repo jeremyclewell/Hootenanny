@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Calendar, MapPin, Plus, Trash2, Utensils, ArrowRight, Users, Hourglass } from "lucide-react";
+import { Calendar, MapPin, Plus, Trash2, Utensils, ArrowRight, Users, Hourglass, MessageSquare } from "lucide-react";
 import AuthButton from "@/components/auth-button";
 import { format } from "date-fns";
 import { parseLocalDate } from "@/lib/calendar";
@@ -29,12 +29,18 @@ export default function MyEvents() {
     enabled: isAuthenticated,
   });
 
+  const commentCountsQuery = useQuery<Record<string, number>>({
+    queryKey: ["/api/my/events/comment-counts"],
+    enabled: isAuthenticated,
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       await apiRequest("DELETE", `/api/events/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/my/events"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/my/events/comment-counts"] });
       toast({ title: "Event deleted" });
     },
     onError: () => {
@@ -43,6 +49,7 @@ export default function MyEvents() {
   });
 
   const events = eventsQuery.data || [];
+  const commentCounts = commentCountsQuery.data || {};
 
   return (
     <div className="min-h-screen bg-background">
@@ -106,6 +113,7 @@ export default function MyEvents() {
             {events.map((ev) => {
               const isDraft = ev.status === "draft";
               const isPolling = ev.pollStatus === "polling";
+              const unreadCount = commentCounts[ev.id] ?? 0;
               const dateLabel = (() => {
                 if (isPolling) return `Polling · ${ev.candidateDates?.length ?? 0} candidate dates`;
                 if (!ev.date) return "No date";
@@ -130,6 +138,15 @@ export default function MyEvents() {
                       ) : (
                         <span className="inline-flex items-center gap-1 rounded-full bg-sage-100 px-2 py-0.5 text-[11px] font-medium text-sage-700 ring-1 ring-sage-100">
                           Published
+                        </span>
+                      )}
+                      {unreadCount > 0 && (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary ring-1 ring-primary/20"
+                          data-testid={`unread-badge-${ev.id}`}
+                        >
+                          <MessageSquare className="h-3 w-3" />
+                          {unreadCount} new {unreadCount === 1 ? "message" : "messages"}
                         </span>
                       )}
                     </div>

@@ -106,6 +106,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get unread comment counts for all owner events
+  app.get("/api/my/events/comment-counts", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getUserId(req)!;
+      const events = await storage.getEventsByOwner(userId);
+      const eventIds = events.map((e) => e.id);
+      const counts = await storage.getUnreadCommentCounts(userId, eventIds);
+      res.json(counts);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch comment counts" });
+    }
+  });
+
+  // Mark all comments as read for an event (owner only)
+  app.post("/api/events/:id/mark-comments-read", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getUserId(req)!;
+      const event = await storage.getEvent(req.params.id);
+      if (!event) return res.status(404).json({ message: "Event not found" });
+      if (!isOwner(req, event)) return res.status(403).json({ message: "Only the event owner can mark comments read" });
+      await storage.markCommentsRead(userId, req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to mark comments read" });
+    }
+  });
+
   // Publish a draft event (owner only)
   app.post("/api/events/:id/publish", isAuthenticated, async (req: any, res) => {
     try {
