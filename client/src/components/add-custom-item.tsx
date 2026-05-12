@@ -9,8 +9,11 @@ import { insertItemSchema } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { CATEGORIES } from "@/lib/categories";
-import { Plus, PlusCircle } from "lucide-react";
+import { LogIn, Plus, PlusCircle } from "lucide-react";
 import { z } from "zod";
+import { useAuth } from "@/hooks/use-auth";
+import { getGuestName } from "@/lib/guest-storage";
+import RsvpDialog from "@/components/rsvp-dialog";
 
 const customItemSchema = insertItemSchema
   .omit({ eventId: true, isCustom: true, claimedBy: true, claimedByEmail: true })
@@ -21,12 +24,24 @@ const customItemSchema = insertItemSchema
 
 type CustomItemForm = z.infer<typeof customItemSchema>;
 
+interface GuestRsvp { guestName: string; }
+
 interface AddCustomItemProps {
   eventId: string;
+  isHost: boolean;
+  isPolling: boolean;
+  rsvps: GuestRsvp[];
 }
 
-export default function AddCustomItem({ eventId }: AddCustomItemProps) {
+export default function AddCustomItem({ eventId, isHost, isPolling, rsvps }: AddCustomItemProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  const authName = user ? ([user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "") : "";
+  const effectiveName = user ? authName : getGuestName();
+  const hasRsvp = isHost || isPolling || rsvps.some(
+    (r) => r.guestName.trim().toLowerCase() === effectiveName.trim().toLowerCase()
+  );
 
   const form = useForm<CustomItemForm>({
     resolver: zodResolver(customItemSchema),
@@ -35,7 +50,10 @@ export default function AddCustomItem({ eventId }: AddCustomItemProps) {
 
   const addItemMutation = useMutation({
     mutationFn: async (data: CustomItemForm) => {
-      const response = await apiRequest("POST", `/api/events/${eventId}/items`, data);
+      const response = await apiRequest("POST", `/api/events/${eventId}/items`, {
+        ...data,
+        guestName: effectiveName,
+      });
       return response.json();
     },
     onMutate: async (data: CustomItemForm) => {
@@ -75,7 +93,6 @@ export default function AddCustomItem({ eventId }: AddCustomItemProps) {
 
   return (
     <div className="surface-card p-6 mb-6">
-      {/* Section header row — icon chip + title + subtitle */}
       <div className="mb-5 flex items-start gap-3">
         <span className="icon-chip-md bg-terracotta-50">
           <PlusCircle className="h-5 w-5 text-primary" />
@@ -88,58 +105,75 @@ export default function AddCustomItem({ eventId }: AddCustomItemProps) {
         </div>
       </div>
 
-      <Form {...form}>
-        <form
-          onSubmit={form.handleSubmit((d) => addItemMutation.mutate(d))}
-          className="flex flex-col sm:flex-row gap-3"
-        >
-          <div className="flex-1">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <Input placeholder="e.g. Homemade Cookies, Fresh Fruit Salad…" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          <div className="sm:w-48">
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Category" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {CATEGORIES.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          <Button
-            type="submit"
-            className="rounded-full bg-coral-gradient hover:opacity-90 shadow-coral border-0 text-white"
-            disabled={addItemMutation.isPending}
+      {!hasRsvp ? (
+        <div className="flex items-center gap-3 rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2.5">
+          <LogIn className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <p className="text-xs text-muted-foreground flex-1">
+            RSVP to this event to add items.
+          </p>
+          <RsvpDialog
+            eventId={eventId}
+            trigger={
+              <Button size="sm" variant="outline" className="rounded-full h-7 px-3 text-xs shrink-0">
+                RSVP
+              </Button>
+            }
+          />
+        </div>
+      ) : (
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit((d) => addItemMutation.mutate(d))}
+            className="flex flex-col sm:flex-row gap-3"
           >
-            <Plus className="mr-2 h-4 w-4" />
-            {addItemMutation.isPending ? "Adding…" : "Add Item"}
-          </Button>
-        </form>
-      </Form>
+            <div className="flex-1">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Input placeholder="e.g. Homemade Cookies, Fresh Fruit Salad…" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="sm:w-48">
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {CATEGORIES.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <Button
+              type="submit"
+              className="rounded-full bg-coral-gradient hover:opacity-90 shadow-coral border-0 text-white"
+              disabled={addItemMutation.isPending}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              {addItemMutation.isPending ? "Adding…" : "Add Item"}
+            </Button>
+          </form>
+        </Form>
+      )}
     </div>
   );
 }

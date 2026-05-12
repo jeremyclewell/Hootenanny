@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Check, UtensilsCrossed, MoreVertical, Pencil, Trash2, X } from "lucide-react";
@@ -7,6 +7,9 @@ import { useToast } from "@/hooks/use-toast";
 import { getCategory } from "@/lib/categories";
 import type { Item, ItemComment } from "@shared/schema";
 import ItemComments from "@/components/item-comments";
+import { useAuth } from "@/hooks/use-auth";
+import { getGuestName } from "@/lib/guest-storage";
+import RsvpDialog from "@/components/rsvp-dialog";
 
 interface GuestRsvp { guestName: string; }
 
@@ -31,6 +34,14 @@ export default function ItemCategories({ items, eventId, itemComments, isHost, i
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
+  const rsvpTriggerRef = useRef<HTMLButtonElement>(null);
+
+  const { user } = useAuth();
+  const authName = user ? ([user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "") : "";
+  const effectiveName = user ? authName : getGuestName();
+  const hasRsvp = isHost || isPolling || rsvps.some(
+    (r) => r.guestName.trim().toLowerCase() === effectiveName.trim().toLowerCase()
+  );
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/items`] });
@@ -100,14 +111,11 @@ export default function ItemCategories({ items, eventId, itemComments, isHost, i
 
   const handleClaimItem = (item: Item) => {
     if (item.claimedBy) return;
-    const savedName = localStorage.getItem("potluck-user-name");
-    if (savedName) {
-      window.dispatchEvent(new CustomEvent("autoClaimItem", {
-        detail: { item, name: savedName, email: localStorage.getItem("potluck-user-email") || "" },
-      }));
-    } else {
-      window.dispatchEvent(new CustomEvent("openClaimModal", { detail: item }));
+    if (!hasRsvp) {
+      rsvpTriggerRef.current?.click();
+      return;
     }
+    window.dispatchEvent(new CustomEvent("openClaimModal", { detail: item }));
   };
 
   const itemsByCategory = items.reduce((acc, item) => {
@@ -260,6 +268,11 @@ export default function ItemCategories({ items, eventId, itemComments, isHost, i
 
   return (
     <div className="space-y-4">
+      {/* Hidden RSVP gate trigger — programmatically clicked when guest tries to claim without RSVPing */}
+      <RsvpDialog
+        eventId={eventId}
+        trigger={<button ref={rsvpTriggerRef} className="sr-only" aria-hidden tabIndex={-1} />}
+      />
       {visibleEntries.map(([cat, catItems]) => renderSection(cat, catItems))}
 
       {/* Show all / collapse toggle */}

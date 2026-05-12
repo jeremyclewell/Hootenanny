@@ -527,6 +527,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!event) return res.status(404).json({ message: "Event not found" });
       if (!canViewEvent(req, event)) return respondDraftHidden(res);
 
+      // RSVP gate: non-owners must have RSVPd (skip during polling — no RSVPs yet)
+      if (!isOwner(req, event) && event.pollStatus !== "polling") {
+        const norm = (s: string) => s.trim().toLowerCase();
+        const guestName = typeof req.body.guestName === "string" ? req.body.guestName : "";
+        if (!guestName) return res.status(403).json({ message: "rsvp_required" });
+        const eventRsvps = await storage.getEventRsvps(event.id);
+        const hasRsvp = eventRsvps.some((r) => norm(r.guestName) === norm(guestName));
+        if (!hasRsvp) return res.status(403).json({ message: "rsvp_required" });
+      }
+
       const { name, category } = customItemSchema.parse(req.body);
       const item = await storage.addItem({
         eventId: req.params.id,
@@ -549,9 +559,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Claim item
-  app.post("/api/items/:id/claim", async (req, res) => {
+  app.post("/api/items/:id/claim", async (req: any, res) => {
     try {
       const claimData = claimItemSchema.parse(req.body);
+
+      // RSVP gate: load the item's event and check if claimer has RSVPd
+      const itemToCheck = await storage.getItem(parseInt(req.params.id));
+      if (itemToCheck) {
+        const eventForItem = await storage.getEvent(itemToCheck.eventId);
+        if (eventForItem && !isOwner(req, eventForItem) && eventForItem.pollStatus !== "polling") {
+          const norm = (s: string) => s.trim().toLowerCase();
+          const eventRsvps = await storage.getEventRsvps(eventForItem.id);
+          const hasRsvp = eventRsvps.some((r) => norm(r.guestName) === norm(claimData.name));
+          if (!hasRsvp) return res.status(403).json({ message: "rsvp_required" });
+        }
+      }
+
       const item = await storage.claimItem(
         parseInt(req.params.id),
         claimData.name,

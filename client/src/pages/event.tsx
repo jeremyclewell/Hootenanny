@@ -175,7 +175,7 @@ export default function EventPage() {
 
   const itemsSection = (
     <div className="mt-8 space-y-4">
-      <AddCustomItem eventId={event!.id} />
+      <AddCustomItem eventId={event!.id} isHost={isHost} isPolling={!!isPolling} rsvps={rsvps} />
       <ItemCategories
         items={items}
         eventId={event!.id}
