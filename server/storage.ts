@@ -53,7 +53,7 @@ export interface IStorage {
   deleteEventComment(commentId: number): Promise<boolean>;
 
   // Comment read tracking
-  markCommentsRead(ownerId: string, eventId: string): Promise<void>;
+  markCommentsRead(ownerId: string, eventId: string): Promise<Date | null>;
   getUnreadCommentCounts(ownerId: string, eventIds: string[]): Promise<Record<string, number>>;
 }
 
@@ -279,9 +279,10 @@ export class DatabaseStorage implements IStorage {
 
   // ── Comment read tracking ────────────────────────────────────────────────────
 
-  async markCommentsRead(ownerId: string, eventId: string): Promise<void> {
+  async markCommentsRead(ownerId: string, eventId: string): Promise<Date | null> {
     const existing = await db.select().from(commentViews)
       .where(and(eq(commentViews.ownerId, ownerId), eq(commentViews.eventId, eventId)));
+    const previousLastViewedAt = existing.length > 0 ? existing[0].lastViewedAt : null;
     if (existing.length > 0) {
       await db.update(commentViews)
         .set({ lastViewedAt: new Date() })
@@ -289,6 +290,7 @@ export class DatabaseStorage implements IStorage {
     } else {
       await db.insert(commentViews).values({ ownerId, eventId, lastViewedAt: new Date() });
     }
+    return previousLastViewedAt;
   }
 
   async getUnreadCommentCounts(ownerId: string, eventIds: string[]): Promise<Record<string, number>> {

@@ -17,6 +17,7 @@ interface ItemCategoriesProps {
   isHost: boolean;
   isPolling: boolean;
   rsvps: GuestRsvp[];
+  lastViewedAt?: Date | null;
 }
 
 /** First-name + last-initial helper for "Anya P. is bringing this" style. */
@@ -26,7 +27,7 @@ function shortName(name: string) {
   return `${parts[0]} ${parts[parts.length - 1].charAt(0).toUpperCase()}.`;
 }
 
-export default function ItemCategories({ items, eventId, itemComments, isHost, isPolling, rsvps }: ItemCategoriesProps) {
+export default function ItemCategories({ items, eventId, itemComments, isHost, isPolling, rsvps, lastViewedAt }: ItemCategoriesProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
@@ -244,6 +245,7 @@ export default function ItemCategories({ items, eventId, itemComments, isHost, i
                     isHost={isHost}
                     isPolling={isPolling}
                     rsvps={rsvps}
+                    lastViewedAt={lastViewedAt}
                   />
                 </div>
               </div>

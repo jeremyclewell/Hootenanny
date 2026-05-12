@@ -28,6 +28,7 @@ interface EventDiscussionProps {
   event: Event;
   isHost: boolean;
   rsvps: GuestRsvp[];
+  lastViewedAt?: Date | null;
 }
 
 interface ReplyFormProps {
@@ -99,6 +100,14 @@ interface CommentRowProps {
   onReplySubmit: (content: string, parentId: number) => void;
   onReplyCancel: () => void;
   replies?: EventComment[];
+  lastViewedAt?: Date | null;
+}
+
+function isNew(createdAt: string | Date, lastViewedAt: Date | null | undefined): boolean {
+  if (lastViewedAt === undefined) return false;
+  const created = typeof createdAt === "string" ? new Date(createdAt) : createdAt;
+  if (lastViewedAt === null) return true;
+  return created > lastViewedAt;
 }
 
 function CommentRow({
@@ -113,6 +122,7 @@ function CommentRow({
   onReplySubmit,
   onReplyCancel,
   replies = [],
+  lastViewedAt,
 }: CommentRowProps) {
   const isOwnComment = comment.authorName.trim().toLowerCase() === effectiveName.trim().toLowerCase();
   const canDelete = isHost || isOwnComment;
@@ -120,9 +130,15 @@ function CommentRow({
   const [collapsed, setCollapsed] = useState(false);
   const showToggle = replies.length >= COLLAPSE_THRESHOLD;
 
+  const commentIsNew = isNew(comment.createdAt, lastViewedAt);
+
   return (
     <div
-      className="rounded-2xl border border-border bg-card p-4"
+      className={`rounded-2xl border p-4 transition-colors ${
+        commentIsNew
+          ? "border-primary/30 bg-terracotta-50/60"
+          : "border-border bg-card"
+      }`}
       data-testid={`event-comment-${comment.id}`}
     >
       {/* Top-level comment */}
@@ -137,6 +153,11 @@ function CommentRow({
             {isHostComment && (
               <span className="inline-flex items-center gap-1 rounded-full bg-sand-100 px-2 py-0.5 text-[10px] font-medium text-sand-600">
                 <Crown className="h-2.5 w-2.5" /> Host
+              </span>
+            )}
+            {commentIsNew && (
+              <span className="inline-flex items-center rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                New
               </span>
             )}
             <span className="text-xs text-muted-foreground">{timeAgo(comment.createdAt)}</span>
@@ -199,10 +220,15 @@ function CommentRow({
             const replyIsOwn = reply.authorName.trim().toLowerCase() === effectiveName.trim().toLowerCase();
             const replyCanDelete = isHost || replyIsOwn;
             const replyIsHostComment = isHost && reply.authorName.trim().toLowerCase() === hostDisplayName.trim().toLowerCase();
+            const replyIsNew = isNew(reply.createdAt, lastViewedAt);
             return (
               <div
                 key={reply.id}
-                className="flex items-start gap-3 group rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5"
+                className={`flex items-start gap-3 group rounded-xl border px-3 py-2.5 ${
+                  replyIsNew
+                    ? "border-primary/30 bg-terracotta-50/50"
+                    : "border-border/60 bg-muted/30"
+                }`}
                 data-testid={`event-comment-${reply.id}`}
               >
                 <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-terracotta-50 text-xs font-semibold text-primary">
@@ -214,6 +240,11 @@ function CommentRow({
                     {replyIsHostComment && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-sand-100 px-2 py-0.5 text-[10px] font-medium text-sand-600">
                         <Crown className="h-2.5 w-2.5" /> Host
+                      </span>
+                    )}
+                    {replyIsNew && (
+                      <span className="inline-flex items-center rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                        New
                       </span>
                     )}
                     <span className="text-[11px] text-muted-foreground">{timeAgo(reply.createdAt)}</span>
@@ -251,7 +282,7 @@ function CommentRow({
   );
 }
 
-export default function EventDiscussion({ event, isHost, rsvps }: EventDiscussionProps) {
+export default function EventDiscussion({ event, isHost, rsvps, lastViewedAt }: EventDiscussionProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [content, setContent] = useState("");
@@ -385,6 +416,7 @@ export default function EventDiscussion({ event, isHost, rsvps }: EventDiscussio
               onReplySubmit={handleReplySubmit}
               onReplyCancel={() => setReplyingTo(null)}
               replies={repliesMap.get(c.id) ?? []}
+              lastViewedAt={lastViewedAt}
             />
           ))}
         </div>

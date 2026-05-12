@@ -2,7 +2,7 @@ import { useParams, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useWebSocket } from "@/lib/websocket";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import EventHeader from "@/components/event-header";
 import AddCustomItem from "@/components/add-custom-item";
 import ItemCategories from "@/components/item-categories";
@@ -36,12 +36,30 @@ export default function EventPage() {
   const isPolling = event?.pollStatus === "polling";
   const isDraft = event?.status === "draft";
 
+  // lastViewedAt: the timestamp captured BEFORE we mark comments as read on this visit.
+  // Comments created after this timestamp (and before we opened the page) are "new".
+  const [lastViewedAt, setLastViewedAt] = useState<Date | null | undefined>(undefined);
+  const hasMarkedRead = useRef(false);
+
+  // Reset per-event baseline whenever the event id changes (e.g. host navigates between events).
+  useEffect(() => {
+    hasMarkedRead.current = false;
+    setLastViewedAt(undefined);
+  }, [id]);
+
   const markReadMutation = useMutation({
     mutationFn: async (eventId: string) => {
-      await apiRequest("POST", `/api/events/${eventId}/mark-comments-read`);
+      const res = await apiRequest("POST", `/api/events/${eventId}/mark-comments-read`);
+      return res.json() as Promise<{ success: boolean; lastViewedAt: string | null }>;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/my/events/comment-counts"] });
+      // Only capture the previousLastViewedAt on the first call (initial page open).
+      // Subsequent WS-triggered calls should not change it — the host is actively watching.
+      if (!hasMarkedRead.current) {
+        hasMarkedRead.current = true;
+        setLastViewedAt(data.lastViewedAt ? new Date(data.lastViewedAt) : null);
+      }
     },
   });
 
@@ -165,6 +183,7 @@ export default function EventPage() {
         isHost={isHost}
         isPolling={!!isPolling}
         rsvps={rsvps}
+        lastViewedAt={isHost ? lastViewedAt : undefined}
       />
     </div>
   );
@@ -179,7 +198,7 @@ export default function EventPage() {
             <PollView event={event!} isHost={isHost} />
           </div>
           {itemsSection}
-          <EventDiscussion event={event!} isHost={isHost} rsvps={rsvps} />
+          <EventDiscussion event={event!} isHost={isHost} rsvps={rsvps} lastViewedAt={isHost ? lastViewedAt : undefined} />
           <ClaimItemModal />
           <EditItemModal />
         </main>
@@ -196,7 +215,7 @@ export default function EventPage() {
         {isHost && event!.pollStatus === "finalized" && <ReopenPollBanner event={event!} />}
         {!isDraft && <RsvpList eventId={event!.id} isHost={isHost} />}
         {itemsSection}
-        <EventDiscussion event={event!} isHost={isHost} rsvps={rsvps} />
+        <EventDiscussion event={event!} isHost={isHost} rsvps={rsvps} lastViewedAt={isHost ? lastViewedAt : undefined} />
         <ClaimItemModal />
         <EditItemModal />
       </main>

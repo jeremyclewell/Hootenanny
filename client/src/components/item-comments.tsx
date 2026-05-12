@@ -28,9 +28,17 @@ interface ItemCommentsProps {
   isHost: boolean;
   isPolling: boolean;
   rsvps: GuestRsvp[];
+  lastViewedAt?: Date | null;
 }
 
-export default function ItemComments({ itemId, eventId, comments, isHost, isPolling, rsvps }: ItemCommentsProps) {
+function isNew(createdAt: string | Date, lastViewedAt: Date | null | undefined): boolean {
+  if (lastViewedAt === undefined) return false;
+  const created = typeof createdAt === "string" ? new Date(createdAt) : createdAt;
+  if (lastViewedAt === null) return true;
+  return created > lastViewedAt;
+}
+
+export default function ItemComments({ itemId, eventId, comments, isHost, isPolling, rsvps, lastViewedAt }: ItemCommentsProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
@@ -88,6 +96,9 @@ export default function ItemComments({ itemId, eventId, comments, isHost, isPoll
   };
 
   const count = comments.length;
+  const newCount = lastViewedAt !== undefined
+    ? comments.filter((c) => isNew(c.createdAt, lastViewedAt)).length
+    : 0;
 
   return (
     <div className="mt-1.5">
@@ -99,6 +110,11 @@ export default function ItemComments({ itemId, eventId, comments, isHost, isPoll
       >
         <MessageCircle className="h-3.5 w-3.5" />
         {count === 0 ? "Add a note" : `${count} ${count === 1 ? "note" : "notes"}`}
+        {newCount > 0 && (
+          <span className="inline-flex items-center rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-semibold text-primary-foreground leading-none">
+            {newCount} new
+          </span>
+        )}
         {count > 0 && (
           <ChevronDown className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`} />
         )}
@@ -112,14 +128,27 @@ export default function ItemComments({ itemId, eventId, comments, isHost, isPoll
           {/* Existing comments — always visible */}
           {comments.length > 0 && (
             <div className="space-y-2">
-              {comments.map((c) => (
-                <div key={c.id} className="flex items-start gap-2 group" data-testid={`item-comment-${c.id}`}>
+              {comments.map((c) => {
+                const commentIsNew = isNew(c.createdAt, lastViewedAt);
+                return (
+                <div
+                  key={c.id}
+                  className={`flex items-start gap-2 group rounded-lg px-2 py-1.5 -mx-2 ${
+                    commentIsNew ? "bg-terracotta-50/70" : ""
+                  }`}
+                  data-testid={`item-comment-${c.id}`}
+                >
                   <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-terracotta-50 text-[10px] font-semibold text-primary">
                     {c.authorName[0]?.toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline gap-1.5 flex-wrap">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-xs font-semibold text-foreground">{c.authorName}</span>
+                      {commentIsNew && (
+                        <span className="inline-flex items-center rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-semibold text-primary-foreground leading-none">
+                          New
+                        </span>
+                      )}
                       <span className="text-[10px] text-muted-foreground">{timeAgo(c.createdAt)}</span>
                     </div>
                     <p className="text-xs text-foreground leading-relaxed mt-0.5">{c.content}</p>
@@ -134,7 +163,8 @@ export default function ItemComments({ itemId, eventId, comments, isHost, isPoll
                     </button>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
 

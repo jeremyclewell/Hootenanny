@@ -122,14 +122,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Mark all comments as read for an event (owner only)
+  // Returns the lastViewedAt timestamp that was recorded BEFORE this update so the
+  // client can use it to highlight comments that were "new" during this visit.
   app.post("/api/events/:id/mark-comments-read", isAuthenticated, async (req: any, res) => {
     try {
       const userId = getUserId(req)!;
       const event = await storage.getEvent(req.params.id);
       if (!event) return res.status(404).json({ message: "Event not found" });
       if (!isOwner(req, event)) return res.status(403).json({ message: "Only the event owner can mark comments read" });
-      await storage.markCommentsRead(userId, req.params.id);
-      res.json({ success: true });
+      const previousLastViewedAt = await storage.markCommentsRead(userId, req.params.id);
+      res.json({ success: true, lastViewedAt: previousLastViewedAt });
     } catch (error) {
       res.status(500).json({ message: "Failed to mark comments read" });
     }
