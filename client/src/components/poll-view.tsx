@@ -140,94 +140,7 @@ export default function PollView({ event, isHost }: PollViewProps) {
     submitVote.mutate();
   };
 
-  return (
-    <div className="space-y-6">
-      {/* Status banner */}
-      <div className="flex items-start gap-3 surface-callout border-teal-100 bg-teal-50 p-5">
-        <span className="icon-chip-sm bg-card ">
-          <CalendarCheck className="h-4 w-4 text-teal-500" />
-        </span>
-        <div>
-          <p className="font-serif font-semibold text-foreground">Picking a date together</p>
-          <p className="text-sm text-muted-foreground mt-1">
-            {isHost
-              ? "Share the link so guests can mark which dates work. You can also set up the food list below — it'll be ready once you lock in a date."
-              : "The host hasn't locked in a date yet. Check every date that works for you below."}
-          </p>
-        </div>
-      </div>
-
-      {/* Voter form */}
-      {!isHost && (
-        <Card className="surface-card">
-          <CardHeader>
-            <CardTitle className="font-serif text-xl">Mark your availability</CardTitle>
-            <CardDescription>
-              Tap every date that could work for you. You can come back and update anytime.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="voter-name">Your name</Label>
-                  <Input
-                    id="voter-name"
-                    value={voter.name}
-                    onChange={(e) => setVoter({ ...voter, name: e.target.value })}
-                    placeholder="Alex Smith"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="voter-email">Email (optional)</Label>
-                  <Input
-                    id="voter-email"
-                    type="email"
-                    value={voter.email}
-                    onChange={(e) => setVoter({ ...voter, email: e.target.value })}
-                    placeholder="alex@example.com"
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-2 sm:grid-cols-2">
-                {candidateDates.map((d) => {
-                  const isSelected = selected.has(d);
-                  return (
-                    <label
-                      key={d}
-                      htmlFor={`date-${d}`}
-                      className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-all ${
-                        isSelected
-                          ? "border-primary bg-terracotta-50 ring-1 ring-primary"
-                          : "border-border bg-card hover:border-sand-400"
-                      }`}
-                    >
-                      <Checkbox
-                        id={`date-${d}`}
-                        checked={isSelected}
-                        onCheckedChange={() => toggle(d)}
-                      />
-                      <div>
-                        <p className="font-medium text-foreground">{format(parseISO(d), "EEEE, MMM d")}</p>
-                        <p className="text-xs text-muted-foreground">{format(parseISO(d), "yyyy")}</p>
-                      </div>
-                    </label>
-                  );
-                })}
-              </div>
-
-              <Button type="submit" className="w-full bg-primary hover:bg-primary/90 rounded-full h-12 text-base font-medium " disabled={submitVote.isPending}>
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-                {submitVote.isPending ? "Saving…" : "Save my availability"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Tally / host panel */}
+  const tallyCard = (
       <Card className="surface-card">
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -405,6 +318,101 @@ export default function PollView({ event, isHost }: PollViewProps) {
           })}
         </CardContent>
       </Card>
+  );
+
+  return (
+    <div className="space-y-6">
+      {/* Status banner */}
+      <div className="flex items-start gap-4 surface-callout border-teal-100 bg-teal-50 p-6">
+        <span className="icon-chip-sm bg-card shrink-0">
+          <CalendarCheck className="h-4 w-4 text-teal-500" />
+        </span>
+        <div>
+          <p className="font-serif font-semibold text-foreground">Picking a date together</p>
+          <p className="text-sm text-muted-foreground mt-1.5">
+            {isHost
+              ? "Share the link so guests can mark which dates work. You can also set up the food list below — it'll be ready once you lock in a date."
+              : "The host hasn't locked in a date yet. Check every date that works for you below."}
+          </p>
+        </div>
+      </div>
+
+      {isHost ? (
+        /* Host view — full width results + finalize controls */
+        tallyCard
+      ) : (
+        /* Invitee view — form on left, results on right */
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          <Card className="surface-card">
+            <CardHeader>
+              <CardTitle className="font-serif text-xl">Mark your availability</CardTitle>
+              <CardDescription>
+                Tap every date that could work for you. You can come back and update anytime.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="voter-name">Your name</Label>
+                    <Input
+                      id="voter-name"
+                      value={voter.name}
+                      onChange={(e) => setVoter({ ...voter, name: e.target.value })}
+                      placeholder="Alex Smith"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="voter-email">Email (optional)</Label>
+                    <Input
+                      id="voter-email"
+                      type="email"
+                      value={voter.email}
+                      onChange={(e) => setVoter({ ...voter, email: e.target.value })}
+                      placeholder="alex@example.com"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {candidateDates.map((d) => {
+                    const isSelected = selected.has(d);
+                    return (
+                      <label
+                        key={d}
+                        htmlFor={`date-${d}`}
+                        className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-all ${
+                          isSelected
+                            ? "border-primary bg-terracotta-50 ring-1 ring-primary"
+                            : "border-border bg-card hover:border-sand-400"
+                        }`}
+                      >
+                        <Checkbox
+                          id={`date-${d}`}
+                          checked={isSelected}
+                          onCheckedChange={() => toggle(d)}
+                        />
+                        <div>
+                          <p className="font-medium text-foreground">{format(parseISO(d), "EEEE, MMM d")}</p>
+                          <p className="text-xs text-muted-foreground">{format(parseISO(d), "yyyy")}</p>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                <Button type="submit" className="w-full bg-primary hover:bg-primary/90 rounded-full h-12 text-base font-medium" disabled={submitVote.isPending}>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  {submitVote.isPending ? "Saving…" : "Save my availability"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          {tallyCard}
+        </div>
+      )}
     </div>
   );
 }

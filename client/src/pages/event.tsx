@@ -194,7 +194,7 @@ export default function EventPage() {
       <div className="min-h-screen relative">
         <EventHeader event={event!} isHost={isHost} />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-          <div className="max-w-2xl">
+          <div>
             <PollView event={event!} isHost={isHost} />
           </div>
           {itemsSection}
