@@ -2,7 +2,7 @@ import type { Express, RequestHandler, Response } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { insertEventSchema, customItemSchema, claimItemSchema, editItemSchema, submitVoteSchema, finalizeDateSchema, addCandidateDatesSchema, reopenPollSchema, submitRsvpSchema, type Event } from "@shared/schema";
+import { insertEventSchema, customItemSchema, claimItemSchema, editItemSchema, submitVoteSchema, finalizeDateSchema, addCandidateDatesSchema, reopenPollSchema, submitRsvpSchema, submitCommentSchema, type Event } from "@shared/schema";
 import { getThemeItems } from "../client/src/lib/theme-items";
 import { setupAuth, isAuthenticated, registerAuthRoutes } from "./replit_integrations/auth";
 
@@ -602,6 +602,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ message: "Failed to delete item" });
+    }
+  });
+
+  // ── Item comments ────────────────────────────────────────────────────────────
+
+  // Get all item comments for an event (batch fetch so frontend can show counts)
+  app.get("/api/events/:id/item-comments", async (req: any, res) => {
+    try {
+      const event = await storage.getEvent(req.params.id);
+      if (!event) return res.status(404).json({ message: "Event not found" });
+      if (!canViewEvent(req, event)) return respondDraftHidden(res);
+      const comments = await storage.getItemCommentsForEvent(req.params.id);
+      res.json(comments);
+    } catch {
+      res.status(500).json({ message: "Failed to fetch item comments" });
+    }
+  });
+
+  // Post a comment on a specific item
+  app.post("/api/items/:itemId/comments", async (req: any, res) => {
+    try {
+      const itemId = parseInt(req.params.itemId, 10);
+      if (Number.isNaN(itemId)) return res.status(400).json({ message: "Invalid item id" });
+
+      const item = await storage.getItem(itemId);
+      if (!item) return res.status(404).json({ message: "Item not found" });
+
+      const event = await storage.getEvent(item.eventId);
+      if (!event) return res.status(404).json({ message: "Event not found" });
+      if (!canViewEvent(req, event)) return respondDraftHidden(res);
+
+      const comment = submitCommentSchema.parse(req.body);
+      const created = await storage.addItemComment(itemId, item.eventId, comment);
+      broadcastToEvent(item.eventId, { type: "itemCommentAdded", comment: created });
+      res.json(created);
+    } catch {
+      res.status(400).json({ message: "Invalid comment data" });
+    }
+  });
+
+  // Delete an item comment (host of the event, or author name match)
+  app.delete("/api/item-comments/:commentId", async (req: any, res) => {
+    try {
+      const commentId = parseInt(req.params.commentId, 10);
+      if (Number.isNaN(commentId)) return res.status(400).json({ message: "Invalid comment id" });
+
+      const comment = await storage.getItemComment(commentId);
+      if (!comment) return res.status(404).json({ message: "Comment not found" });
+
+      const event = await storage.getEvent(comment.eventId);
+      if (!event) return res.status(404).json({ message: "Event not found" });
+
+      const { authorName } = (req.body || {}) as { authorName?: string };
+      const norm = (s?: string | null) => (s || "").trim().toLowerCase();
+      const hostOk = isOwner(req, event);
+      const authorOk = !!authorName && norm(authorName) === norm(comment.authorName);
+
+      if (!hostOk && !authorOk) return res.status(403).json({ message: "Not allowed to delete this comment" });
+
+      await storage.deleteItemComment(commentId);
+      broadcastToEvent(comment.eventId, { type: "itemCommentDeleted", commentId, itemId: comment.itemId });
+      res.json({ success: true });
+    } catch {
+      res.status(500).json({ message: "Failed to delete comment" });
+    }
+  });
+
+  // ── Event discussion ──────────────────────────────────────────────────────────
+
+  // Get all discussion comments for an event
+  app.get("/api/events/:id/comments", async (req: any, res) => {
+    try {
+      const event = await storage.getEvent(req.params.id);
+      if (!event) return res.status(404).json({ message: "Event not found" });
+      if (!canViewEvent(req, event)) return respondDraftHidden(res);
+      const comments = await storage.getEventComments(req.params.id);
+      res.json(comments);
+    } catch {
+      res.status(500).json({ message: "Failed to fetch comments" });
+    }
+  });
+
+  // Post a discussion comment
+  app.post("/api/events/:id/comments", async (req: any, res) => {
+    try {
+      const event = await storage.getEvent(req.params.id);
+      if (!event) return res.status(404).json({ message: "Event not found" });
+      if (!canViewEvent(req, event)) return respondDraftHidden(res);
+
+      const comment = submitCommentSchema.parse(req.body);
+      const created = await storage.addEventComment(req.params.id, comment);
+      broadcastToEvent(req.params.id, { type: "eventCommentAdded", comment: created });
+      res.json(created);
+    } catch {
+      res.status(400).json({ message: "Invalid comment data" });
+    }
+  });
+
+  // Delete a discussion comment (host or author)
+  app.delete("/api/event-comments/:commentId", async (req: any, res) => {
+    try {
+      const commentId = parseInt(req.params.commentId, 10);
+      if (Number.isNaN(commentId)) return res.status(400).json({ message: "Invalid comment id" });
+
+      const comment = await storage.getEventComment(commentId);
+      if (!comment) return res.status(404).json({ message: "Comment not found" });
+
+      const event = await storage.getEvent(comment.eventId);
+      if (!event) return res.status(404).json({ message: "Event not found" });
+
+      const { authorName } = (req.body || {}) as { authorName?: string };
+      const norm = (s?: string | null) => (s || "").trim().toLowerCase();
+      const hostOk = isOwner(req, event);
+      const authorOk = !!authorName && norm(authorName) === norm(comment.authorName);
+
+      if (!hostOk && !authorOk) return res.status(403).json({ message: "Not allowed to delete this comment" });
+
+      await storage.deleteEventComment(commentId);
+      broadcastToEvent(comment.eventId, { type: "eventCommentDeleted", commentId });
+      res.json({ success: true });
+    } catch {
+      res.status(500).json({ message: "Failed to delete comment" });
     }
   });
 

@@ -12,12 +12,13 @@ import PollView from "@/components/poll-view";
 import ReopenPollBanner from "@/components/reopen-poll-banner";
 import RsvpList from "@/components/rsvp-list";
 import RsvpCta from "@/components/rsvp-cta";
+import EventDiscussion from "@/components/event-discussion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, Hourglass, Utensils } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import type { Event, Item } from "@shared/schema";
+import type { Event, Item, ItemComment } from "@shared/schema";
 
 export default function EventPage() {
   const { id } = useParams();
@@ -40,35 +41,36 @@ export default function EventPage() {
     enabled: !!id && !!event,
   });
 
+  const itemCommentsQuery = useQuery<ItemComment[]>({
+    queryKey: [`/api/events/${id}/item-comments`],
+    enabled: !!id && !!event,
+  });
+
   useEffect(() => {
     if (!lastMessage || !id) return;
-    if (
-      lastMessage.type === "itemClaimed" ||
-      lastMessage.type === "itemAdded" ||
-      lastMessage.type === "itemDeleted" ||
-      lastMessage.type === "itemUpdated" ||
-      lastMessage.type === "itemUnclaimed"
-    ) {
+
+    if (["itemClaimed", "itemAdded", "itemDeleted", "itemUpdated", "itemUnclaimed"].includes(lastMessage.type)) {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/items`] });
     }
     if (lastMessage.type === "voteSubmitted") {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/votes`] });
     }
-    if (lastMessage.type === "rsvpSubmitted" || lastMessage.type === "rsvpDeleted") {
+    if (["rsvpSubmitted", "rsvpDeleted"].includes(lastMessage.type)) {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/rsvps`] });
     }
-    if (
-      lastMessage.type === "dateFinalized" ||
-      lastMessage.type === "pollReopened" ||
-      lastMessage.type === "eventPublished" ||
-      lastMessage.type === "eventUnpublished"
-    ) {
+    if (["dateFinalized", "pollReopened", "eventPublished", "eventUnpublished"].includes(lastMessage.type)) {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/items`] });
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/votes`] });
     }
     if (lastMessage.type === "candidateDatesUpdated") {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}`] });
+    }
+    if (["itemCommentAdded", "itemCommentDeleted"].includes(lastMessage.type)) {
+      queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/item-comments`] });
+    }
+    if (["eventCommentAdded", "eventCommentDeleted"].includes(lastMessage.type)) {
+      queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/comments`] });
     }
   }, [lastMessage, id]);
 
@@ -90,7 +92,6 @@ export default function EventPage() {
   }
 
   if (eventQuery.error || !eventQuery.data) {
-    // Differentiate "draft, hidden" from "not found"
     const message = (eventQuery.error as Error | undefined)?.message || "";
     const isDraftHidden = /^403:/.test(message) && /draft|not published/i.test(message);
 
@@ -127,56 +128,51 @@ export default function EventPage() {
   }
 
   const items = itemsQuery.data || [];
+  const allItemComments = itemCommentsQuery.data || [];
 
-  // ─── Polling mode: date not yet confirmed ────────────────────────────────
-  // Show the date poll AND the potluck item list so the host can prep the
-  // menu while guests are voting. Guests can also browse (and claim) items.
+  const itemsSection = (
+    <div className="mt-8 space-y-4">
+      <AddCustomItem eventId={event!.id} />
+      <ItemCategories
+        items={items}
+        eventId={event!.id}
+        itemComments={allItemComments}
+        isHost={isHost}
+      />
+    </div>
+  );
+
+  // ─── Polling mode ─────────────────────────────────────────────────────────
   if (isPolling) {
     return (
-      <>
-        <div className="min-h-screen relative" style={{ zIndex: 1 }}>
-          <EventHeader event={event!} isHost={isHost} />
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-            <div className="max-w-2xl">
-              <PollView event={event!} isHost={isHost} />
-            </div>
-            <div className="mt-8 space-y-4">
-              <AddCustomItem eventId={event!.id} />
-              <ItemCategories items={items} eventId={event!.id} />
-            </div>
-            <ClaimItemModal />
-            <EditItemModal />
-          </main>
-        </div>
-      </>
-    );
-  }
-
-  // ─── Normal mode: date confirmed (or optional date, no poll) ─────────────
-  return (
-    <>
-      <div className="min-h-screen relative" style={{ zIndex: 1 }}>
+      <div className="min-h-screen relative">
         <EventHeader event={event!} isHost={isHost} />
-
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-          {/* Don't show RSVP CTA on a draft — guests can't RSVP yet */}
-          {!isDraft && <RsvpCta eventId={event!.id} eventTitle={event!.title} />}
-
-          {isHost && event!.pollStatus === "finalized" && (
-            <ReopenPollBanner event={event!} />
-          )}
-
-          {!isDraft && <RsvpList eventId={event!.id} isHost={isHost} />}
-
-          <div className="mt-8 space-y-4">
-            <AddCustomItem eventId={event!.id} />
-            <ItemCategories items={items} eventId={event!.id} />
+          <div className="max-w-2xl">
+            <PollView event={event!} isHost={isHost} />
           </div>
-
+          {itemsSection}
+          <EventDiscussion event={event!} isHost={isHost} />
           <ClaimItemModal />
           <EditItemModal />
         </main>
       </div>
-    </>
+    );
+  }
+
+  // ─── Normal mode ──────────────────────────────────────────────────────────
+  return (
+    <div className="min-h-screen relative">
+      <EventHeader event={event!} isHost={isHost} />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+        {!isDraft && <RsvpCta eventId={event!.id} eventTitle={event!.title} />}
+        {isHost && event!.pollStatus === "finalized" && <ReopenPollBanner event={event!} />}
+        {!isDraft && <RsvpList eventId={event!.id} isHost={isHost} />}
+        {itemsSection}
+        <EventDiscussion event={event!} isHost={isHost} />
+        <ClaimItemModal />
+        <EditItemModal />
+      </main>
+    </div>
   );
 }

@@ -51,8 +51,26 @@ export const rsvps = pgTable("rsvps", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const eventStatusEnum = z.enum(["draft", "published"]);
+export const itemComments = pgTable("item_comments", {
+  id: serial("id").primaryKey(),
+  itemId: integer("item_id").notNull().references(() => items.id, { onDelete: "cascade" }),
+  eventId: text("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+  authorName: text("author_name").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
 
+export const eventComments = pgTable("event_comments", {
+  id: serial("id").primaryKey(),
+  eventId: text("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+  authorName: text("author_name").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// ── Zod schemas ───────────────────────────────────────────────────────────────
+
+export const eventStatusEnum = z.enum(["draft", "published"]);
 export const rsvpResponseEnum = z.enum(["yes", "no", "maybe"]);
 
 export const submitRsvpSchema = z.object({
@@ -63,12 +81,7 @@ export const submitRsvpSchema = z.object({
 });
 
 export const insertEventSchema = createInsertSchema(events)
-  .omit({
-    id: true,
-    ownerId: true,
-    status: true,
-    createdAt: true,
-  })
+  .omit({ id: true, ownerId: true, status: true, createdAt: true })
   .extend({
     title: z.string().min(1, "Event title is required"),
     theme: z.string().min(1, "Event theme is required"),
@@ -78,14 +91,8 @@ export const insertEventSchema = createInsertSchema(events)
     durationMinutes: z.number().int().min(15).max(24 * 60).optional(),
   });
 
-export const insertItemSchema = createInsertSchema(items).omit({
-  id: true,
-  claimedAt: true,
-});
+export const insertItemSchema = createInsertSchema(items).omit({ id: true, claimedAt: true });
 
-// Strict shape for the custom-item POST body. Clients are not allowed to
-// set eventId, isCustom, claimedBy, claimedByEmail, or claimedAt — those
-// are server-controlled.
 export const customItemSchema = z.object({
   name: z.string().min(1, "Item name is required"),
   category: z.string().min(1, "Category is required"),
@@ -121,6 +128,13 @@ export const reopenPollSchema = z.object({
   additionalDates: z.array(z.string().min(1)).default([]),
 });
 
+export const submitCommentSchema = z.object({
+  authorName: z.string().min(1, "Name is required"),
+  content: z.string().min(1, "Comment cannot be empty").max(1000),
+});
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
 export type Event = typeof events.$inferSelect;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
 export type Item = typeof items.$inferSelect;
@@ -134,3 +148,6 @@ export type Rsvp = typeof rsvps.$inferSelect;
 export type SubmitRsvp = z.infer<typeof submitRsvpSchema>;
 export type RsvpResponse = z.infer<typeof rsvpResponseEnum>;
 export type EventStatus = z.infer<typeof eventStatusEnum>;
+export type ItemComment = typeof itemComments.$inferSelect;
+export type EventComment = typeof eventComments.$inferSelect;
+export type SubmitComment = z.infer<typeof submitCommentSchema>;

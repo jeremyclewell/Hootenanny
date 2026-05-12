@@ -5,11 +5,14 @@ import { Check, UtensilsCrossed, MoreVertical, Pencil, Trash2, X } from "lucide-
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { getCategory } from "@/lib/categories";
-import type { Item } from "@shared/schema";
+import type { Item, ItemComment } from "@shared/schema";
+import ItemComments from "@/components/item-comments";
 
 interface ItemCategoriesProps {
   items: Item[];
   eventId: string;
+  itemComments: ItemComment[];
+  isHost: boolean;
 }
 
 /** First-name + last-initial helper for "Anya P. is bringing this" style. */
@@ -19,7 +22,7 @@ function shortName(name: string) {
   return `${parts[0]} ${parts[parts.length - 1].charAt(0).toUpperCase()}.`;
 }
 
-export default function ItemCategories({ items, eventId }: ItemCategoriesProps) {
+export default function ItemCategories({ items, eventId, itemComments, isHost }: ItemCategoriesProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
@@ -124,7 +127,7 @@ export default function ItemCategories({ items, eventId }: ItemCategoriesProps) 
         {/* Category header */}
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <span className="icon-chip-sm bg-card ">
+            <span className="icon-chip-sm bg-card">
               <CategoryIcon className="h-4 w-4 text-primary" />
             </span>
             <h3 className="font-serif font-semibold text-foreground text-lg">{cfg.name}</h3>
@@ -140,91 +143,102 @@ export default function ItemCategories({ items, eventId }: ItemCategoriesProps) 
         {/* Items */}
         <div className="space-y-2">
           {categoryItems.map((item) => {
-            const claimed = !!item.claimedBy;
+            const isClaimed = !!item.claimedBy;
+            const commentsForItem = itemComments.filter((c) => c.itemId === item.id);
             return (
-              <div
-                key={item.id}
-                onClick={() => handleClaimItem(item)}
-                className={`flex items-center justify-between rounded-xl p-3 transition-all duration-200 ${
-                  claimed
-                    ? "bg-sage-50 cursor-default"
-                    : "bg-card hover:bg-accent/40 cursor-pointer"
-                }`}
-                data-testid={`item-${item.id}`}
-              >
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <span className={`icon-chip-sm ${claimed ? "bg-sage-100" : "bg-terracotta-50"}`}>
-                    {claimed
-                      ? <Check className="h-4 w-4 text-sage-600" />
-                      : <UtensilsCrossed className="h-4 w-4 text-primary" />
-                    }
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className={`font-medium text-foreground leading-tight ${claimed ? "line-through text-muted-foreground" : ""}`}>
-                      {item.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {claimed
-                        ? <><span className="font-medium">{shortName(item.claimedBy!)}</span> is bringing this</>
-                        : "Up for grabs"
+              <div key={item.id} data-testid={`item-${item.id}`}>
+                <div
+                  onClick={() => handleClaimItem(item)}
+                  className={`flex items-center justify-between rounded-xl p-3 transition-all duration-200 ${
+                    isClaimed
+                      ? "bg-sage-50 cursor-default"
+                      : "bg-card hover:bg-accent/40 cursor-pointer"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <span className={`icon-chip-sm ${isClaimed ? "bg-sage-100" : "bg-terracotta-50"}`}>
+                      {isClaimed
+                        ? <Check className="h-4 w-4 text-sage-600" />
+                        : <UtensilsCrossed className="h-4 w-4 text-primary" />
                       }
-                    </p>
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className={`font-medium text-foreground leading-tight ${isClaimed ? "line-through text-muted-foreground" : ""}`}>
+                        {item.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {isClaimed
+                          ? <><span className="font-medium">{shortName(item.claimedBy!)}</span> is bringing this</>
+                          : "Up for grabs"
+                        }
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    {!isClaimed && (
+                      <Button
+                        size="sm"
+                        onClick={() => handleClaimItem(item)}
+                        className="bg-primary hover:bg-primary/90 rounded-full px-4 h-8 text-xs"
+                        data-testid={`button-claim-${item.id}`}
+                      >
+                        Claim
+                      </Button>
+                    )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 rounded-full bg-card border border-border text-muted-foreground hover:bg-card"
+                          data-testid={`item-menu-${item.id}`}
+                        >
+                          <MoreVertical className="h-3.5 w-3.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {isClaimed ? (
+                          <DropdownMenuItem
+                            onClick={() => unclaimItemMutation.mutate(item.id)}
+                            disabled={unclaimItemMutation.isPending}
+                            className="cursor-pointer text-destructive focus:text-destructive"
+                          >
+                            <X className="mr-2 h-4 w-4" />
+                            Unclaim
+                          </DropdownMenuItem>
+                        ) : (
+                          <>
+                            <DropdownMenuItem
+                              onClick={() => window.dispatchEvent(new CustomEvent("openEditItemModal", { detail: item }))}
+                              className="cursor-pointer"
+                            >
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => deleteItemMutation.mutate(item.id)}
+                              disabled={deleteItemMutation.isPending}
+                              className="cursor-pointer text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
-                  {!claimed && (
-                    <Button
-                      size="sm"
-                      onClick={() => handleClaimItem(item)}
-                      className="bg-primary hover:bg-primary/90 rounded-full px-4 h-8 text-xs"
-                      data-testid={`button-claim-${item.id}`}
-                    >
-                      Claim
-                    </Button>
-                  )}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 rounded-full bg-card border border-border text-muted-foreground hover:bg-card"
-                        data-testid={`item-menu-${item.id}`}
-                      >
-                        <MoreVertical className="h-3.5 w-3.5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {claimed ? (
-                        <DropdownMenuItem
-                          onClick={() => unclaimItemMutation.mutate(item.id)}
-                          disabled={unclaimItemMutation.isPending}
-                          className="cursor-pointer text-destructive focus:text-destructive"
-                        >
-                          <X className="mr-2 h-4 w-4" />
-                          Unclaim
-                        </DropdownMenuItem>
-                      ) : (
-                        <>
-                          <DropdownMenuItem
-                            onClick={() => window.dispatchEvent(new CustomEvent("openEditItemModal", { detail: item }))}
-                            className="cursor-pointer"
-                          >
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => deleteItemMutation.mutate(item.id)}
-                            disabled={deleteItemMutation.isPending}
-                            className="cursor-pointer text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                {/* Per-item comment thread */}
+                <div className="px-3 pb-1">
+                  <ItemComments
+                    itemId={item.id}
+                    eventId={eventId}
+                    comments={commentsForItem}
+                    isHost={isHost}
+                  />
                 </div>
               </div>
             );
