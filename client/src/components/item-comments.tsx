@@ -45,18 +45,25 @@ export default function ItemComments({ itemId, eventId, comments, isHost, isPoll
   const [content, setContent] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Derive authorName from auth session or RSVP stored name — never a manual input
-  const authorName = user
+  // Always read the guest name fresh from localStorage — no stale state.
+  // When rsvps prop updates after a same-tab RSVP, the component re-renders
+  // and picks up the new name immediately, flipping hasRsvp to true.
+  const authName = user
     ? ([user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "")
-    : getGuestName();
+    : "";
 
-  // Re-read from localStorage each time the thread opens (another component may have saved a new name)
-  const [guestName, setGuestName] = useState(authorName);
+  // Counter used only to force re-renders on cross-tab storage changes
+  const [, setNameTick] = useState(0);
   useEffect(() => {
-    if (open && !user) setGuestName(getGuestName());
-  }, [open, user]);
+    if (user) return;
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "hootenanny-guest-name") setNameTick((n) => n + 1);
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [user]);
 
-  const effectiveName = user ? authorName : guestName;
+  const effectiveName = user ? authName : getGuestName();
 
   // Has this person RSVPd? (hosts bypass; polling events have no RSVPs yet)
   const hasRsvp = isHost || isPolling || rsvps.some(

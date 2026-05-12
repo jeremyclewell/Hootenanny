@@ -290,21 +290,23 @@ export default function EventDiscussion({ event, isHost, rsvps, lastViewedAt }: 
 
   const isPolling = event.pollStatus === "polling";
 
-  // Derive name from auth or stored RSVP name — no manual input
+  // Derive name from auth or stored RSVP name — read fresh on every render so
+  // that a same-tab RSVP is picked up the moment the rsvps prop updates.
   const authName = user ? ([user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "") : "";
-  const [guestName, setGuestDisplayName] = useState(() => user ? authName : getGuestName());
 
+  // Counter used only to force re-renders on cross-tab storage changes
+  const [, setNameTick] = useState(0);
   useEffect(() => {
-    if (user) { setGuestDisplayName(authName); return; }
-    // Sync with other tabs / components that update guest-storage
+    if (user) return;
     const onStorage = (e: StorageEvent) => {
-      if (e.key === "hootenanny-guest-name" && e.newValue) setGuestDisplayName(e.newValue);
+      if (e.key === "hootenanny-guest-name") setNameTick((n) => n + 1);
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, [user, authName]);
+  }, [user]);
 
-  const effectiveName = user ? authName : guestName;
+  // Always read fresh — never stale because it re-runs on every render
+  const effectiveName = user ? authName : getGuestName();
 
   // Host display name for badging replies
   const hostDisplayName = authName;
