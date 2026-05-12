@@ -29,7 +29,7 @@ async function getResendCredentials(): Promise<{ apiKey: string; fromEmail: stri
     if (!connectionSettings?.settings?.api_key) return null;
     return {
       apiKey: connectionSettings.settings.api_key,
-      fromEmail: connectionSettings.settings.from_email || "notifications@hootenanny.app",
+      fromEmail: "Hootenanny <notifications@email.hootenanny.events>",
     };
   } catch {
     return null;
