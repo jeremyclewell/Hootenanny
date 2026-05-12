@@ -48,7 +48,7 @@ export interface IStorage {
 
   // Event discussion comments
   getEventComments(eventId: string): Promise<EventComment[]>;
-  addEventComment(eventId: string, comment: SubmitComment): Promise<EventComment>;
+  addEventComment(eventId: string, comment: SubmitComment, parentId?: number | null): Promise<EventComment>;
   getEventComment(commentId: number): Promise<EventComment | undefined>;
   deleteEventComment(commentId: number): Promise<boolean>;
 
@@ -257,9 +257,10 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(eventComments).where(eq(eventComments.eventId, eventId)).orderBy(eventComments.createdAt);
   }
 
-  async addEventComment(eventId: string, comment: SubmitComment): Promise<EventComment> {
+  async addEventComment(eventId: string, comment: SubmitComment, parentId?: number | null): Promise<EventComment> {
     const [created] = await db.insert(eventComments).values({
       eventId, authorName: comment.authorName.trim(), content: comment.content.trim(),
+      parentId: parentId ?? null,
     }).returning();
     return created;
   }
@@ -270,6 +271,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteEventComment(commentId: number): Promise<boolean> {
+    // Delete child replies first to avoid orphans, then delete the comment itself
+    await db.delete(eventComments).where(eq(eventComments.parentId, commentId));
     const result = await db.delete(eventComments).where(eq(eventComments.id, commentId)).returning();
     return result.length > 0;
   }

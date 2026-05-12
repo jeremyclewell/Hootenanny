@@ -737,7 +737,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!hasRsvp) return res.status(403).json({ message: "rsvp_required" });
       }
 
-      const created = await storage.addEventComment(req.params.id, comment);
+      const parentId = comment.parentId ?? null;
+
+      // Validation for replies: parent must exist, belong to same event, and be top-level
+      if (parentId !== null) {
+        const parent = await storage.getEventComment(parentId);
+        if (!parent || parent.eventId !== req.params.id || parent.parentId !== null) {
+          return res.status(400).json({ message: "Invalid parent comment" });
+        }
+      }
+
+      const created = await storage.addEventComment(req.params.id, comment, parentId);
       broadcastToEvent(req.params.id, { type: "eventCommentAdded", comment: created });
       res.json(created);
     } catch {

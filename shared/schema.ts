@@ -63,6 +63,7 @@ export const itemComments = pgTable("item_comments", {
 export const eventComments = pgTable("event_comments", {
   id: serial("id").primaryKey(),
   eventId: text("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+  parentId: integer("parent_id"),
   authorName: text("author_name").notNull(),
   content: text("content").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -138,6 +139,7 @@ export const reopenPollSchema = z.object({
 export const submitCommentSchema = z.object({
   authorName: z.string().min(1, "Name is required"),
   content: z.string().min(1, "Comment cannot be empty").max(1000),
+  parentId: z.number().int().optional().nullable(),
 });
 
 // ── Types ─────────────────────────────────────────────────────────────────────
