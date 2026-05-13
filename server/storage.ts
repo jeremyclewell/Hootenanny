@@ -13,6 +13,7 @@ export interface IStorage {
   createEvent(ownerId: string, event: InsertEvent): Promise<Event>;
   getEvent(id: string): Promise<Event | undefined>;
   getEventsByOwner(ownerId: string): Promise<Event[]>;
+  updateEvent(id: string, updates: Partial<InsertEvent>): Promise<Event | undefined>;
   updateEventStatus(id: string, status: EventStatus): Promise<Event | undefined>;
   deleteEvent(id: string): Promise<boolean>;
   finalizeEventDate(id: string, date: string, time?: string | null, durationMinutes?: number): Promise<Event | undefined>;
@@ -84,6 +85,11 @@ export class DatabaseStorage implements IStorage {
 
   async getEventsByOwner(ownerId: string): Promise<Event[]> {
     return db.select().from(events).where(eq(events.ownerId, ownerId)).orderBy(desc(events.createdAt));
+  }
+
+  async updateEvent(id: string, updates: Partial<InsertEvent>): Promise<Event | undefined> {
+    const [event] = await db.update(events).set(updates).where(eq(events.id, id)).returning();
+    return event || undefined;
   }
 
   async updateEventStatus(id: string, status: EventStatus): Promise<Event | undefined> {

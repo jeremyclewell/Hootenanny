@@ -11,9 +11,10 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   Share2, Utensils, MapPin, Users, Calendar, CalendarPlus, Download,
-  Clock, Hourglass, Plus, Bell, Send, EyeOff,
+  Clock, Hourglass, Plus, Bell, Send, EyeOff, Pencil,
 } from "lucide-react";
 import type { Event } from "@shared/schema";
+import EditEventDialog from "@/components/edit-event-dialog";
 import { buildGoogleCalendarUrl, downloadIcsFile, parseLocalDate } from "@/lib/calendar";
 import { SiGooglecalendar } from "react-icons/si";
 import { formatDuration } from "@/lib/duration";
@@ -205,16 +206,27 @@ export default function EventHeader({ event, isHost }: EventHeaderProps) {
             )}
 
             {isHost && isDraft && (
-              <Button
-                size="sm"
-                onClick={() => publishMutation.mutate()}
-                disabled={publishMutation.isPending}
-                className="rounded-full bg-coral-gradient hover:opacity-90 shadow-coral border-0 text-white"
-                data-testid="button-publish"
-              >
-                <Send className="sm:mr-1.5 h-4 w-4" />
-                <span className="hidden sm:inline">{publishMutation.isPending ? "Publishing…" : "Publish"}</span>
-              </Button>
+              <>
+                <EditEventDialog
+                  event={event}
+                  trigger={
+                    <Button size="sm" variant="outline" className="rounded-full" data-testid="button-edit-event">
+                      <Pencil className="sm:mr-1.5 h-4 w-4" />
+                      <span className="hidden sm:inline">Edit</span>
+                    </Button>
+                  }
+                />
+                <Button
+                  size="sm"
+                  onClick={() => publishMutation.mutate()}
+                  disabled={publishMutation.isPending}
+                  className="rounded-full bg-coral-gradient hover:opacity-90 shadow-coral border-0 text-white"
+                  data-testid="button-publish"
+                >
+                  <Send className="sm:mr-1.5 h-4 w-4" />
+                  <span className="hidden sm:inline">{publishMutation.isPending ? "Publishing…" : "Publish"}</span>
+                </Button>
+              </>
             )}
             {isHost && !isDraft && (
               <Button
@@ -266,16 +278,27 @@ export default function EventHeader({ event, isHost }: EventHeaderProps) {
                 Only you can see it. Publish to share the link with guests so they can RSVP and claim items.
               </p>
             </div>
-            <Button
-              size="sm"
-              onClick={() => publishMutation.mutate()}
-              disabled={publishMutation.isPending}
-              className="rounded-full bg-coral-gradient hover:opacity-90 shadow-coral border-0 text-white"
-              data-testid="button-publish-banner"
-            >
-              <Send className="mr-1.5 h-4 w-4" />
-              {publishMutation.isPending ? "Publishing…" : "Publish event"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <EditEventDialog
+                event={event}
+                trigger={
+                  <Button size="sm" variant="outline" className="rounded-full" data-testid="button-edit-event-banner">
+                    <Pencil className="mr-1.5 h-4 w-4" />
+                    Edit details
+                  </Button>
+                }
+              />
+              <Button
+                size="sm"
+                onClick={() => publishMutation.mutate()}
+                disabled={publishMutation.isPending}
+                className="rounded-full bg-coral-gradient hover:opacity-90 shadow-coral border-0 text-white"
+                data-testid="button-publish-banner"
+              >
+                <Send className="mr-1.5 h-4 w-4" />
+                {publishMutation.isPending ? "Publishing…" : "Publish event"}
+              </Button>
+            </div>
           </div>
         </div>
       )}

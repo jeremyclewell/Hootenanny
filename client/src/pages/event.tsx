@@ -97,7 +97,7 @@ export default function EventPage() {
     if (["rsvpSubmitted", "rsvpDeleted"].includes(lastMessage.type)) {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/rsvps`] });
     }
-    if (["dateFinalized", "pollReopened", "eventPublished", "eventUnpublished"].includes(lastMessage.type)) {
+    if (["dateFinalized", "pollReopened", "eventPublished", "eventUnpublished", "eventUpdated"].includes(lastMessage.type)) {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/items`] });
       queryClient.invalidateQueries({ queryKey: [`/api/events/${id}/votes`] });

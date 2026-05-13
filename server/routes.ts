@@ -2,7 +2,7 @@ import type { Express, RequestHandler, Response } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { insertEventSchema, customItemSchema, claimItemSchema, editItemSchema, submitVoteSchema, finalizeDateSchema, addCandidateDatesSchema, reopenPollSchema, submitRsvpSchema, submitCommentSchema, type Event } from "@shared/schema";
+import { insertEventSchema, updateEventSchema, customItemSchema, claimItemSchema, editItemSchema, submitVoteSchema, finalizeDateSchema, addCandidateDatesSchema, reopenPollSchema, submitRsvpSchema, submitCommentSchema, type Event } from "@shared/schema";
 import { getThemeItems } from "../client/src/lib/theme-items";
 import { setupAuth, isAuthenticated, registerAuthRoutes } from "./replit_integrations/auth";
 import { authStorage } from "./replit_integrations/auth/storage";
@@ -193,6 +193,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, lastViewedAt: previousLastViewedAt });
     } catch (error) {
       res.status(500).json({ message: "Failed to mark comments read" });
+    }
+  });
+
+  // Update event details (owner only)
+  app.patch("/api/events/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const event = await storage.getEvent(req.params.id);
+      if (!event) return res.status(404).json({ message: "Event not found" });
+      if (!isOwner(req, event)) return res.status(403).json({ message: "Only the event owner can edit" });
+      const updates = updateEventSchema.parse(req.body);
+      const updated = await storage.updateEvent(req.params.id, updates);
+      if (!updated) return res.status(500).json({ message: "Failed to update event" });
+      broadcastToEvent(req.params.id, { type: "eventUpdated", event: updated });
+      res.json(updated);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid event data" });
     }
   });
 

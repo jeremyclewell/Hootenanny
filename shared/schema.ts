@@ -132,6 +132,8 @@ export const finalizeDateSchema = z.object({
   endTime: z.string().optional().nullable(),
 });
 
+export const updateEventSchema = insertEventSchema.partial().omit({ pollStatus: true, candidateDates: true });
+
 export const addCandidateDatesSchema = z.object({
   dates: z.array(z.string().min(1)).min(1, "Add at least one date"),
 });
