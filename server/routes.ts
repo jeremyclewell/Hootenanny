@@ -610,6 +610,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!hasRsvp) return res.status(403).json({ message: "rsvp_required" });
       }
 
+
       const { name, category } = customItemSchema.parse(req.body);
       const item = await storage.addItem({
         eventId: req.params.id,

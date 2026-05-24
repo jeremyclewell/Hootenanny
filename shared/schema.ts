@@ -108,6 +108,7 @@ export const customItemSchema = z.object({
   category: z.string().min(1, "Category is required"),
 });
 
+
 export const claimItemSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email().optional().or(z.literal("")),

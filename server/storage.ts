@@ -138,6 +138,11 @@ export class DatabaseStorage implements IStorage {
     return item || undefined;
   }
 
+  async getItem(itemId: number): Promise<Item | undefined> {
+    const [item] = await db.select().from(items).where(eq(items.id, itemId));
+    return item || undefined;
+  }
+
   async addItem(insertItem: InsertItem): Promise<Item> {
     const [item] = await db.insert(items).values({
       ...insertItem,
